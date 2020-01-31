@@ -41,22 +41,21 @@ class OsmDataCollector:
             filename = wget.download(url, out=DIR_PATH)
             os.rename(filename, os.path.join(DIR_PATH, "tracks" + str(i) + ".gpx"))
 
-    def get_feature(self):
+    def get_feature_nodes(self, node_tag):
         print("getting features")
         r = self.overpass_api.query("""
-        node(""" + str(48.854) + """,""" + str(2.34) + """,""" + str(48.859) + """,""" + str(2.35) + """) 
-        ["tourism" = "information"];
-        out;
-        """)
+        node(""" + str(self.box[1]) + """,""" + str(self.box[0]) + """,""" + str(self.box[3]) + """,""" +
+                                    str(self.box[2]) + """)[""" + node_tag + """]; out;""")
         print(r.nodes)
 
-    def collect_osm_data(self, feature_list):
-        # self.get_gpx_files()
-        self.get_feature()
+    def collect_osm_data(self):
+        self.get_gpx_files()
+        self.get_feature_nodes(""" "tourism" = "viewpoint" """)
 
 
 if __name__ == "__main__":
     BOX = [2.3314, 48.8461, 2.3798, 48.8643]  # coordinates of the area: left, bottom, right, up (Paris streets)
 
     data_collector = OsmDataCollector(BOX)
-    data_collector.collect_osm_data([])
+    data_collector.collect_osm_data()
+# (48.854,2.34,48.859,2.35);
