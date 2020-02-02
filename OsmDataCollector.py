@@ -1,17 +1,14 @@
 import os
-
+from OsmTrack import OsmTrack
 import gpxpy
 import wget
-import numpy as np
-import pandas as pd
 import shutil
 import overpy
 import matplotlib.pyplot as plt
 import mplleaflet
-from geopy.distance import geodesic
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 9
+NUMBER_OF_WANTED_FILES = 100
 
 
 class OsmDataCollector:
@@ -24,23 +21,6 @@ class OsmDataCollector:
         self.overpass_api = overpy.Overpass()
         self.tracks = []
         self._collect_osm_data()
-
-    @staticmethod
-    def _compute_track_velocity(coords, segment):
-        """
-        Computes the average velocity of a track.
-        :param coords:
-        :param segment:
-        :return:
-        """
-        times = pd.Series([p.time for p in segment.points], name='time')
-        dt = np.diff(times.values) / np.timedelta64(1, 'h')
-        dv = []
-        for i in range(len(coords.lat) - 1):
-            geodesic_distance = geodesic([coords.lat[i], coords.lon[i]],
-                                         [coords.lat[i + 1], coords.lon[i + 1]]).km
-            dv.append(geodesic_distance / dt[i] if dt[i] > 0 else np.nan)
-        return np.nanmean(dv)
 
     def _create_url(self, file_index):
         """
@@ -68,7 +48,7 @@ class OsmDataCollector:
             filename = wget.download(url, out=DIR_PATH)
             os.rename(filename, os.path.join(DIR_PATH, "tracks" + str(i) + ".gpx"))
 
-    def _collect_tracks(self):
+    def _collect_filtered_tracks(self):
         print("saving tracks...")
         for filename in os.listdir(DIR_PATH):
             gpx_file = open(os.path.join(DIR_PATH, filename), 'r', encoding="utf8")
@@ -77,14 +57,10 @@ class OsmDataCollector:
                 for seg in track.segments:
                     if seg.points[0].time is None:  # dismisses private segments
                         continue
-                    coords = pd.DataFrame([
-                        {'lat': p.latitude,
-                         'lon': p.longitude,
-                         'time': p.time,
-                         } for p in seg.points])
-                    if self._compute_track_velocity(coords, seg) > 7:
+                    curr_track = OsmTrack(seg)
+                    if curr_track.avg_velocity > 12:
                         continue
-                    self.tracks.append(coords)
+                    self.tracks.append(curr_track)
 
     def _get_feature_nodes(self, node_tag):
         print("getting features")
@@ -95,14 +71,15 @@ class OsmDataCollector:
 
     def _collect_osm_data(self):
         self._get_gpx_files()
-        self._collect_tracks()
+        self._collect_filtered_tracks()
         # self._get_feature_nodes(""" "tourism" = "viewpoint" """)
 
 
 def present_tracks(tracks_to_plot):
     print("plotting...")
     fig, ax = plt.subplots()
-    for df in tracks_to_plot:
+    for track in tracks_to_plot:
+        df = track.gps_points
         df = df.dropna()
         ax.plot(df['lon'], df['lat'], color='magenta', linewidth=2, alpha=0.5)
     mplleaflet.show()
@@ -111,8 +88,10 @@ def present_tracks(tracks_to_plot):
 if __name__ == "__main__":
     paris_streets = [2.3314, 48.8461, 2.3798, 48.8643]  # coordinates of the area: left, bottom, right, up
     louvre = [2.3295, 48.8586, 2.3422, 48.8636]  # coordinates of the area: left, bottom, right, up
+    feldberg = [8.1026, 48.3933, 8.183, 48.4335]  # coordinates of the area: left, bottom, right, up
+    baiersbronn = [8.1584, 48.4688, 8.4797, 48.6291]  # coordinates of the area: left, bottom, right, up
 
-    data_collector = OsmDataCollector(louvre)
+    data_collector = OsmDataCollector(baiersbronn)
     present_tracks(data_collector.tracks)
 
 # (48.854,2.34,48.859,2.35);
