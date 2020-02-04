@@ -1,14 +1,16 @@
 import os
 from OsmTrack import OsmTrack
+from PointTags import PointTags
 import gpxpy
 import wget
 import shutil
+import pandas as pd
 import overpy
 import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 100
+NUMBER_OF_WANTED_FILES = 30
 
 
 class OsmDataCollector:
@@ -19,6 +21,8 @@ class OsmDataCollector:
     def __init__(self, bounding_box):
         self.box = bounding_box
         self.overpass_api = overpy.Overpass()
+        self.water_points = []
+        self.historic_points = []
         self.tracks = []
         self._collect_osm_data()
 
@@ -67,21 +71,40 @@ class OsmDataCollector:
         r = self.overpass_api.query("""
         node(""" + str(self.box[1]) + """,""" + str(self.box[0]) + """,""" + str(self.box[3]) + """,""" +
                                     str(self.box[2]) + """)[""" + node_tag + """]; out;""")
-        print(r.nodes)
+        return pd.DataFrame([{'lat': p.lat, 'lon': p.lon} for p in r.nodes])
+
+    def _match_interest_points_to_tracks(self, interest_points, tag):
+        for index, point in interest_points.iterrows():
+            for track in self.tracks:
+                if track.is_close(point):
+                    track.add_interest_point(tag)
 
     def _collect_osm_data(self):
         self._get_gpx_files()
         self._collect_filtered_tracks()
-        # self._get_feature_nodes(""" "tourism" = "viewpoint" """)
+        self.historic_points = self._get_feature_nodes(""" "historic" """)
+        self.water_points = self._get_feature_nodes(""" "waterway" """)
+        self._match_interest_points_to_tracks(self.historic_points, PointTags.HISTORIC)
+        self._match_interest_points_to_tracks(self.water_points, PointTags.WATER)
 
 
-def present_tracks(tracks_to_plot):
+def plot_tracks(tracks_to_plot, historic_points, water_points):
     print("plotting...")
     fig, ax = plt.subplots()
+    ax.scatter(historic_points['lon'], historic_points['lat'], color='magenta', s=10, edgecolors='black')
+    ax.scatter(water_points['lon'], water_points['lat'], color='blue', s=10, edgecolors='black')
     for track in tracks_to_plot:
         df = track.gps_points
         df = df.dropna()
-        ax.plot(df['lon'], df['lat'], color='magenta', linewidth=2, alpha=0.5)
+        if (PointTags.HISTORIC and PointTags.WATER) in track.interest_points:
+            ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
+        elif PointTags.HISTORIC in track.interest_points:
+            ax.plot(df['lon'], df['lat'], color='magenta', linewidth=3, alpha=0.5)
+        elif PointTags.WATER in track.interest_points:
+            ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
+        else:
+            ax.plot(df['lon'], df['lat'], color='black', linewidth=3, alpha=0.5)
+
     mplleaflet.show()
 
 
@@ -92,6 +115,6 @@ if __name__ == "__main__":
     baiersbronn = [8.1584, 48.4688, 8.4797, 48.6291]  # coordinates of the area: left, bottom, right, up
 
     data_collector = OsmDataCollector(baiersbronn)
-    present_tracks(data_collector.tracks)
+    plot_tracks(data_collector.tracks, data_collector.historic_points, data_collector.water_points)
 
 # (48.854,2.34,48.859,2.35);

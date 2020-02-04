@@ -1,19 +1,20 @@
 import PointTags
 import pandas as pd
 import numpy as np
+import math
 from geopy.distance import geodesic
 
 
 class OsmTrack:
     def __init__(self, segment):
         self.segment = segment
-        self.interest_points = []  # Rivers, historic interest points, etc...
+        self.interest_points = set()  # Rivers, historic interest points, etc...
         self.gps_points = self.extract_gps_points()
         self.length = self.calculate_length()
         self.avg_velocity = self.calculate_avg_velocity()
 
     def add_interest_point(self, point_tag: PointTags):
-        self.interest_points.append(point_tag)
+        self.interest_points.add(point_tag)
 
     def calculate_avg_velocity(self):
         times = pd.Series([p.time for p in self.segment.points], name='time')
@@ -27,6 +28,13 @@ class OsmTrack:
 
     def calculate_length(self):
         return 0
+
+    def is_close(self, point):
+        min_dist = math.inf
+        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] / 50), 1))
+        for idx, track_point in sample.iterrows():
+            min_dist = min(min_dist, geodesic([track_point.lat, track_point.lon], [point.lat, point.lon]).m)
+        return min_dist < 200
 
     def extract_gps_points(self):
         gps_points = pd.DataFrame([
