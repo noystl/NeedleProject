@@ -26,8 +26,12 @@ class OsmTrack:
             dv.append(geodesic_distance / dt[i] if dt[i] > 0 else np.nan)
         return np.nanmean(dv)
 
-    def calculate_length(self):
-        return 0
+    def calculate_length(self):  # Todo: test.
+        length = 0
+        for i in range(len(self.gps_points.lat) - 1):
+            length += geodesic([self.gps_points.lat[i], self.gps_points.lon[i]],
+                               [self.gps_points.lat[i + 1], self.gps_points.lon[i + 1]]).km
+        return length
 
     def is_close(self, point):
         min_dist = math.inf
