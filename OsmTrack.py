@@ -1,11 +1,13 @@
-import PointTag
 import pandas as pd
 import numpy as np
 import math
+from PointTag import PointTag
+from TrackShape import TrackShape
 from geopy.distance import geodesic
 
 CLOSENESS_THRESH_METERS = 200
-SAMPLING_RATIO = 1/50
+LOOP_THRESH_METERS = 10
+SAMPLING_RATIO = 1 / 10
 
 
 class OsmTrack:
@@ -19,6 +21,7 @@ class OsmTrack:
         self.gps_points = self.extract_gps_points()  # Pandas df (lat, lon, time)
         self.length = self.calculate_length()  # The length of the track (in km)
         self.avg_velocity = self.calculate_avg_velocity()  # The average velocity of the track (in km\h)
+        self.shape = self.deduce_track_shape()
 
     def add_interest_point(self, point_tag: PointTag):
         """
@@ -75,3 +78,13 @@ class OsmTrack:
              'time': p.time,
              } for p in self.segment.points])
         return gps_points
+
+    def deduce_track_shape(self) -> TrackShape:
+        """
+        Infers the general shape of the track by looking at the distance between it's start and end points.
+        :return: The shape of the track (LOOP if it's a closed curve, and CURVE otherwise)
+        """
+        end_point_idx = self.gps_points.shape[0] - 1
+        dist = geodesic([self.gps_points.lat[0], self.gps_points.lon[0]],
+                        [self.gps_points.lat[end_point_idx], self.gps_points.lon[end_point_idx]]).m
+        return TrackShape.LOOP if dist < LOOP_THRESH_METERS else TrackShape.CURVE

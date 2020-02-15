@@ -1,6 +1,7 @@
 import os
 from OsmTrack import OsmTrack
 from PointTag import PointTag
+from TrackShape import TrackShape
 import gpxpy
 import wget
 import shutil
@@ -10,8 +11,8 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 5  # This is the number of gpx files we download from osm.
-SPEED_LIMIT_KMH = 12
+NUMBER_OF_WANTED_FILES = 2  # This is the number of gpx files we download from osm.
+SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
 class OsmDataCollector:
@@ -29,9 +30,9 @@ class OsmDataCollector:
         """
         self.box = bounding_box
         self.overpass_api = overpy.Overpass()
-        self.water_points = []        # Points tagged as "waterway": https://wiki.openstreetmap.org/wiki/Key%3Awaterway
-        self.historic_points = []     # Points tagged as "historic": https://wiki.openstreetmap.org/wiki/Key%3Ahistoric
-        self.tracks = []              # A list of OsmTrack objects.
+        self.water_points = []  # Points tagged as "waterway": https://wiki.openstreetmap.org/wiki/Key%3Awaterway
+        self.historic_points = []  # Points tagged as "historic": https://wiki.openstreetmap.org/wiki/Key%3Ahistoric
+        self.tracks = []  # A list of OsmTrack objects.
         self._collect_osm_data()
 
     def _create_url(self, file_index: int) -> str:
@@ -75,7 +76,7 @@ class OsmDataCollector:
                     if seg.points[0].time is None:  # dismisses private segments
                         continue
                     curr_track = OsmTrack(seg)
-                    if curr_track.avg_velocity > 12:
+                    if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50:
                         continue
                     self.tracks.append(curr_track)
 
@@ -120,23 +121,36 @@ class OsmDataCollector:
         self._match_interest_points_to_tracks(self.water_points, PointTag.WATER)
 
 
+def plot_by_interest(track: OsmTrack, ax):
+    df = track.gps_points
+    df = df.dropna()
+    if (PointTag.HISTORIC and PointTag.WATER) in track.interest_points:
+        ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
+    elif PointTag.HISTORIC in track.interest_points:
+        ax.plot(df['lon'], df['lat'], color='magenta', linewidth=3, alpha=0.5)
+    elif PointTag.WATER in track.interest_points:
+        ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
+    else:
+        ax.plot(df['lon'], df['lat'], color='black', linewidth=3, alpha=0.5)
+
+
+def plot_by_shape(track: OsmTrack, ax):
+    df = track.gps_points
+    df = df.dropna()
+    if track.shape is TrackShape.LOOP:
+        ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
+    else:
+        ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
+
+
 def plot_tracks(tracks_to_plot, historic_points, water_points):  # For debugging
     print("plotting...")
     fig, ax = plt.subplots()
     ax.scatter(historic_points['lon'], historic_points['lat'], color='magenta', s=10, edgecolors='black')
     ax.scatter(water_points['lon'], water_points['lat'], color='blue', s=10, edgecolors='black')
     for track in tracks_to_plot:
-        df = track.gps_points
-        df = df.dropna()
-        if (PointTag.HISTORIC and PointTag.WATER) in track.interest_points:
-            ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
-        elif PointTag.HISTORIC in track.interest_points:
-            ax.plot(df['lon'], df['lat'], color='magenta', linewidth=3, alpha=0.5)
-        elif PointTag.WATER in track.interest_points:
-            ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
-        else:
-            ax.plot(df['lon'], df['lat'], color='black', linewidth=3, alpha=0.5)
-
+        # plot_by_interest(track, ax)
+        plot_by_shape(track, ax)
     mplleaflet.show()
 
 
