@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 2  # This is the number of gpx files we download from osm.
+NUMBER_OF_WANTED_FILES = 1  # This is the number of gpx files we download from osm.
 SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
@@ -30,8 +30,7 @@ class OsmDataCollector:
         """
         self.box = bounding_box
         self.overpass_api = overpy.Overpass()
-        self.water_points = []  # Points tagged as "waterway": https://wiki.openstreetmap.org/wiki/Key%3Awaterway
-        self.historic_points = []  # Points tagged as "historic": https://wiki.openstreetmap.org/wiki/Key%3Ahistoric
+        self.interest_points_dict = {}  # Contains the interest points coordinates by tag.
         self.tracks = []  # A list of OsmTrack objects.
         self._collect_osm_data()
 
@@ -80,7 +79,7 @@ class OsmDataCollector:
                         continue
                     self.tracks.append(curr_track)
 
-    def _get_feature_nodes(self, node_tag: str) -> pd.DataFrame:
+    def _get_interest_points(self, node_tag: str) -> pd.DataFrame:
         """
         Uses Overpass-API to extract the coordinates of interest points inside self.box.
         :param node_tag: What kind of interest point should be extracted. For example: "historic".
@@ -91,7 +90,7 @@ class OsmDataCollector:
 
         :return: a pandas df (lat, lon) containing the
         """
-        print("getting features")
+        print("getting features: " + node_tag)
         r = self.overpass_api.query("""
         node(""" + str(self.box[1]) + """,""" + str(self.box[0]) + """,""" + str(self.box[3]) + """,""" +
                                     str(self.box[2]) + """)[""" + node_tag + """]; out;""")
@@ -108,6 +107,20 @@ class OsmDataCollector:
                 if track.is_close(point):
                     track.add_interest_point(tag)
 
+    def _handle_interest_points(self):
+        """
+        Gets interest points of all categories, and attaches them to the correct tracks.
+        """
+        query_list = [""" "historic" """, """ "waterway" = "waterfall" """, """ "natural" = "water" """,
+                      """ "leisure" = "bird_hide" """, """ "natural" = "cave_entrance" """, """ "geological" """,
+                      """ "waterway" = "river" """, """ "natural" = "spring" """]
+        tags = [PointTag.HISTORIC, PointTag.WATERFALL, PointTag.WATER, PointTag.BIRDING, PointTag.CAVE,
+                PointTag.GEOLOGIC, PointTag.RIVER, PointTag.SPRING]
+        for query, tag in zip(query_list, tags):
+            interest_points = self._get_interest_points(query)
+            self.interest_points_dict[tag] = interest_points
+            self._match_interest_points_to_tracks(interest_points, tag)
+
     def _collect_osm_data(self):
         """
         Collects the public gps-tracks in self.box and creates corresponding OsmTracks objects, using additional
@@ -115,23 +128,20 @@ class OsmDataCollector:
         """
         self._get_gpx_files()
         self._collect_filtered_tracks()
-        self.historic_points = self._get_feature_nodes(""" "historic" """)
-        self.water_points = self._get_feature_nodes(""" "waterway" """)
-        self._match_interest_points_to_tracks(self.historic_points, PointTag.HISTORIC)
-        self._match_interest_points_to_tracks(self.water_points, PointTag.WATER)
+        self._handle_interest_points()
 
 
-def plot_by_interest(track: OsmTrack, ax):
-    df = track.gps_points
-    df = df.dropna()
-    if (PointTag.HISTORIC and PointTag.WATER) in track.interest_points:
-        ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
-    elif PointTag.HISTORIC in track.interest_points:
-        ax.plot(df['lon'], df['lat'], color='magenta', linewidth=3, alpha=0.5)
-    elif PointTag.WATER in track.interest_points:
-        ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
-    else:
-        ax.plot(df['lon'], df['lat'], color='black', linewidth=3, alpha=0.5)
+# def plot_by_interest(track: OsmTrack, ax):
+#     df = track.gps_points
+#     df = df.dropna()
+#     if (PointTag.HISTORIC and PointTag.WATER) in track.interest_points:
+#         ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
+#     elif PointTag.HISTORIC in track.interest_points:
+#         ax.plot(df['lon'], df['lat'], color='magenta', linewidth=3, alpha=0.5)
+#     elif PointTag.WATER in track.interest_points:
+#         ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
+#     else:
+#         ax.plot(df['lon'], df['lat'], color='black', linewidth=3, alpha=0.5)
 
 
 def plot_by_shape(track: OsmTrack, ax):
@@ -143,13 +153,16 @@ def plot_by_shape(track: OsmTrack, ax):
         ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
 
 
-def plot_tracks(tracks_to_plot, historic_points, water_points):  # For debugging
+def plot_tracks(tracks_to_plot, interest_points_dict):  # For debugging
     print("plotting...")
     fig, ax = plt.subplots()
-    ax.scatter(historic_points['lon'], historic_points['lat'], color='magenta', s=10, edgecolors='black')
-    ax.scatter(water_points['lon'], water_points['lat'], color='blue', s=10, edgecolors='black')
+    color_palette = {PointTag.RIVER: "r", PointTag.HISTORIC: "m", PointTag.GEOLOGIC: "k", PointTag.WATER: "g",
+                     PointTag.SPRING: "b", PointTag.CAVE: "y", PointTag.BIRDING: "w", PointTag.WATERFALL: "c"}
+    for category in interest_points_dict:
+        points = interest_points_dict[category]
+        if not points.empty:
+            ax.scatter(points['lon'], points['lat'], color=color_palette[category], s=10, edgecolors='black')
     for track in tracks_to_plot:
-        # plot_by_interest(track, ax)
         plot_by_shape(track, ax)
     mplleaflet.show()
 
@@ -161,6 +174,6 @@ if __name__ == "__main__":
     baiersbronn = [8.1584, 48.4688, 8.4797, 48.6291]  # coordinates of the area: left, bottom, right, up
 
     data_collector = OsmDataCollector(baiersbronn)
-    plot_tracks(data_collector.tracks, data_collector.historic_points, data_collector.water_points)
+    plot_tracks(data_collector.tracks, data_collector.interest_points_dict)
 
 # (48.854,2.34,48.859,2.35);

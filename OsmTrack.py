@@ -6,7 +6,7 @@ from TrackShape import TrackShape
 from geopy.distance import geodesic
 
 CLOSENESS_THRESH_METERS = 200
-LOOP_THRESH_METERS = 10
+LOOP_THRESH_METERS = 100
 SAMPLING_RATIO = 1 / 10
 
 
@@ -43,7 +43,7 @@ class OsmTrack:
             dv.append(geodesic_distance / dt[i] if dt[i] > 0 else np.nan)
         return float(np.nanmean(dv))
 
-    def calculate_length(self) -> float:  # Todo: test.
+    def calculate_length(self) -> float:
         """
         Calculates the track length (in km)
         :return: the length (km)
@@ -79,7 +79,7 @@ class OsmTrack:
              } for p in self.segment.points])
         return gps_points
 
-    def deduce_track_shape(self) -> TrackShape:
+    def deduce_track_shape(self) -> TrackShape:  # Todo: test more thoroughly
         """
         Infers the general shape of the track by looking at the distance between it's start and end points.
         :return: The shape of the track (LOOP if it's a closed curve, and CURVE otherwise)
@@ -88,3 +88,21 @@ class OsmTrack:
         dist = geodesic([self.gps_points.lat[0], self.gps_points.lon[0]],
                         [self.gps_points.lat[end_point_idx], self.gps_points.lon[end_point_idx]]).m
         return TrackShape.LOOP if dist < LOOP_THRESH_METERS else TrackShape.CURVE
+
+    def get_vector_repr(self):  # todo: refactor.
+        """
+        :return: a vector containing the data collected on this track.
+        """
+        v = []
+
+        v.append(1) if PointTag.WATERFALL in self.interest_points else v.append(0)
+        v.append(1) if PointTag.BIRDING in self.interest_points else v.append(0)
+        v.append(1) if PointTag.RIVER in self.interest_points else v.append(0)
+        v.append(1) if PointTag.CAVE in self.interest_points else v.append(0)
+        v.append(1) if PointTag.WATER in self.interest_points else v.append(0)
+        v.append(1) if PointTag.SPRING in self.interest_points else v.append(0)
+        v.append(1) if PointTag.GEOLOGIC in self.interest_points else v.append(0)
+        v.append(1) if PointTag.HISTORIC in self.interest_points else v.append(0)
+        v.append(self.length)
+        v.append(1) if self.shape is TrackShape.LOOP else v.append(0)
+        return v
