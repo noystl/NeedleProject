@@ -174,6 +174,7 @@ if __name__ == "__main__":
     baiersbronn = [8.1584, 48.4688, 8.4797, 48.6291]  # coordinates of the area: left, bottom, right, up
 
     data_collector = OsmDataCollector(baiersbronn)
+    x = 1
     plot_tracks(data_collector.tracks, data_collector.interest_points_dict)
 
 # (48.854,2.34,48.859,2.35);

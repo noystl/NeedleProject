@@ -1,6 +1,7 @@
 from selenium import webdriver
 import json
 import os
+from PointTag import PointTag
 import numpy as np
 
 
@@ -154,10 +155,44 @@ def trails_in_urls(driver, name):
     return trail_urls
 
 
+def conv_track_data ():
+    with open('C:\\Users\\Matan Pinkas\\Documents\\tracks\\data.json') as f:
+        data = json.load(f)
+    for i in data.keys():
+        data[i]['features'] = check_list(data[i]['features'])
+    save_data(data, 666)
+
+
+
+def check_list(features):
+
+    new_features = []
+    if 'River/Creek' in features:
+        new_features.append(PointTag.RIVER.value)
+    if 'Waterfall' in features:
+        new_features.append(PointTag.WATERFALL.value)
+    if 'Birding' in features:
+        new_features.append(PointTag.BIRDING.value)
+    if 'Cave' in features:
+        new_features.append(PointTag.CAVE.value)
+    if 'Lake' in features:
+        new_features.append(PointTag.WATER.value)
+    elif 'Fishing' in features:
+        new_features.append(PointTag.WATER.value)
+    elif 'Swimming' in features:
+        new_features.append(PointTag.WATER.value)
+    if 'Geological Significance' in features:
+        new_features.append(PointTag.GEOLOGIC.value)
+    if 'Historical Significance' in features:
+        new_features.append(PointTag.HISTORIC.value)
+    return new_features
+
+
+
 if __name__ == "__main__":
 
     # countries crawled so far - Australia, Brazil, France, Italy, Switzerland, South Africa, United Kingdom
-    # ['Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont']
+    # ,'Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont'
     # countries = ['Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont']
     # ff_driver = setup()
     # homepage(ff_driver)
@@ -178,12 +213,7 @@ if __name__ == "__main__":
     #     index += len(trail_urls)
     #     c += 1
     #     save_data(data, c)
-
-    with open('C:\\Users\\Matan Pinkas\\Documents\\tracks\\data.json') as f:
+    with open('C:\\Users\\Matan Pinkas\\Documents\\tracks\\data666.json') as f:
         data = json.load(f)
-    res = {}
-    for i in data.keys():
-        for feature in data[i]['features']:
-            res.setdefault(feature, 0)
-            res[feature] += 1
+    conv_track_data()
     x = 1
