@@ -1,9 +1,10 @@
 #TODO:
-# break file into modules-
+# (1) break file into modules-
 #       1. class for a elev map that can be questioned.
 #       2. file for the graph rep (?)
 #       3. file for the slopes rep (?)
-#       4. or a class that delivers the functionality of 3. , and omits 2. "on the way"?
+#       4. or a class that delivers the functionality of 3. , and omits 2. "on the way"(?)
+# (2) generalize the SITE_COORDS, and SITE_ELEV_MAP for the project to use, by creating a file for them (?)
 
 
 import os
