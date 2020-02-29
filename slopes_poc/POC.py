@@ -1,5 +1,7 @@
+import math
 from datasketch import MinHash, MinHashLSH
 from slopes_poc import TestDataGenerator as genDat
+from geopy.distance import geodesic
 import pandas as pd
 
 """
@@ -11,20 +13,35 @@ NUMBER_OF_SHINGLES = 100
 SHINGLE_LENGTH = 50  # just a random number, should be modified later.
 
 
-def calc_slope(x1: float, x2: float, y1: float, y2: float) -> float:
-    """
-    calculates the slope between two points (x1,y1), (x2,y2)
-    """
-    pass
-
-
-def get_shingles(points: pd.DataFrame) -> set:
+def get_shingles(points: pd.DataFrame) -> set:    # Todo: test this!
     """
     Converts the given track into a set of shingles.
     :param points: a pandas df containing the lat lon of the points consisting a gps track.
     :return: a set of the slope-shingles appearing in the track.
     """
-    return {1}
+    shing_set = set()
+
+    def win_len(s, e):
+        return geodesic([points.lat[s], points.lon[s]], [points.lat[e], points.lon[e]]).m
+
+    def calc_slope(x1, x2, y1, y2):
+        return (x1 - x2) / (y1 - y2) if y1 != y2 else 0   # Todo: what are we suppose todo when the slope is undefined?
+
+    for i in range(len(points)):
+        win_start = i
+        win_end = win_start
+
+        while win_end < len(points) and win_len(win_start, win_end) < SHINGLE_LENGTH:
+            win_end += 1
+
+        if win_end >= len(points):
+            break
+
+        slope = calc_slope(points.lat[win_start], points.lat[win_end], points.lon[win_start], points.lon[win_end])
+        shingle = math.floor(slope * 100)
+        shing_set.add(shingle)
+
+    return shing_set
 
 
 def get_minhash(shingles: set) -> MinHash:

@@ -7,9 +7,10 @@ def generate_test_tracks(n=10) -> list:
     :param n: the number of tracks to generate.
     :return: a list of the generated tracks.
     """
-    t1 = pd.DataFrame([{'lat': 1, 'lon': 1}, {'lat': 2, 'lon': 2}])  # Nonsense. To remove and implement the real func.
-    t2 = pd.DataFrame([{'lat': 2, 'lon': 2}, {'lat': 1, 'lon': 2}])
-    t3 = pd.DataFrame([{'lat': 1, 'lon': 1}, {'lat': 4, 'lon': 1}])
+    # Nonsense. To remove and implement the real func.
+    t1 = pd.DataFrame([{'lat': 1, 'lon': 1}, {'lat': 2, 'lon': 2}, {'lat': 81, 'lon': 21}, {'lat': 25, 'lon': 22}])
+    t2 = pd.DataFrame([{'lat': 2, 'lon': 23}, {'lat': 1, 'lon': 25}, {'lat': 2, 'lon': 2}, {'lat': 81, 'lon': 21}])
+    t3 = pd.DataFrame([{'lat': 1, 'lon': 1}, {'lat': 4, 'lon': 1}, {'lat': 81, 'lon': 21}, {'lat': 25, 'lon': 22}])
     dummy_test_tracks = [t1, t2, t3]
     return dummy_test_tracks
 
