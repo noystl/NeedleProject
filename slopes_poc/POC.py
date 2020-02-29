@@ -37,7 +37,7 @@ def get_shingles(points: pd.DataFrame) -> set:    # Todo: test this!
         if win_end >= len(points):
             break
 
-        slope = calc_slope(points.lat[win_start], points.lat[win_end], points.lon[win_start], points.lon[win_end])
+        slope = calc_slope(points.lat[win_start], points.lat[win_end], points.lon[win_start], points.lon[win_end])  # todo: fix this. It doesn't calculte the right slope.
         shingle = math.floor(slope * 100)
         shing_set.add(shingle)
 
