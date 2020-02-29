@@ -1,3 +1,11 @@
+#TODO:
+# break file into modules-
+#       1. class for a elev map that can be questioned.
+#       2. file for the graph rep (?)
+#       3. file for the slopes rep (?)
+#       4. or a class that delivers the functionality of 3. , and omits 2. "on the way"?
+
+
 import os
 import math
 import numpy as np
@@ -31,8 +39,6 @@ def make_elev_map(area_file):
     return data
 
 
-# Elevation representation (for graph display- testing intuition) #
-
 def get_elev_atpt(elev_map, lon, lat, x, y):
     """
     :param elev_map: 2d array of elevation in a grid (2d np array of ints)
@@ -52,6 +58,7 @@ def get_elev_atpt(elev_map, lon, lat, x, y):
     return elev_x, elev_y
 
 
+# Elevation representation (for graph display- testing intuition) #
 def computeTrackElevation(points, dat):
     """
     computes the elevation values along the track, represented by it's points.
@@ -107,6 +114,7 @@ def plotDistElevation():
 
 # slope Representation (for shingling: representing the tracks as vector of enums- percentage of slope) #
 # TODO
+
 
 if __name__ == "__main__":
 
