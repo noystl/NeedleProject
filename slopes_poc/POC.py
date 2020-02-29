@@ -1,4 +1,5 @@
 from datasketch import MinHash, MinHashLSH
+from slopes_poc import TestDataGenerator as genDat
 import pandas as pd
 
 """
@@ -23,7 +24,7 @@ def get_shingles(points: pd.DataFrame) -> set:
     :param points: a pandas df containing the lat lon of the points consisting a gps track.
     :return: a set of the slope-shingles appearing in the track.
     """
-    pass
+    return {1}
 
 
 def get_minhash(shingles: set) -> MinHash:
@@ -34,14 +35,24 @@ def get_minhash(shingles: set) -> MinHash:
     """
     minhash = MinHash(num_perm=128)
     for shin in shingles:
-        minhash.update(shin.encode('utf-8'))  # not sure what should go into update here.
+        minhash.update(str(shin).encode('utf-8'))  # not sure what should go into update here.
     return minhash
 
 
 if __name__ == '__main__':
-    osm_track = None  # We want to find a similar track to this one.
-    test_tracks = None  # We will choose the most similar track from this set
+
+    osm_track = genDat.generate_osm_track()  # We want to find a similar track to this one.
+    test_tracks = genDat.generate_test_tracks()  # We will choose the most similar track from this set
     lsh = MinHashLSH(threshold=0.7, num_perm=128)
 
-    # For each track, get it's shingles, convert them into a a minhash object, and insert it into the lsh obj.
-    # Then, we can return the closest track using lsh.query (example: http://ekzhu.com/datasketch/lsh.html)
+    for idx, track_pts in enumerate(test_tracks):
+        shingles = get_shingles(track_pts)
+        min_hash = get_minhash(shingles)
+        lsh.insert(str(idx), min_hash)
+
+    shingles = get_shingles(osm_track)
+    osm_min_hash = get_minhash(shingles)
+    lsh.insert("osm_track", get_minhash(shingles))
+
+    result = lsh.query(osm_min_hash)
+    print("Approximate neighbours with Jaccard similarity > 0.7", result)
