@@ -9,10 +9,14 @@
 
 import os
 import math
+import mplleaflet
 import numpy as np
 import OsmDataCollector as odc
 import matplotlib.pyplot as plt
 from geopy.distance import distance
+import scipy.ndimage
+RAD_TO_DEG = 1 / 57.2957795
+
 
 PARIS_COORS = [2.3314, 48.8461, 2.3798, 48.8643]
 LOUVRE_COORS = [2.3295, 48.8586, 2.3422, 48.8636]
@@ -75,7 +79,7 @@ def computeTrackElevation(points, dat):
     return np.asarray(elevations)
 
 
-def computeTrackKm(points):
+def computeTrackKm(points):  # TODO: compare with Noy's implementation of getting the track's length
     """
     computes the km values along the track, represented by it's points.
     distance over path in computed by: https://janakiev.com/blog/gps-points-distance-python/
@@ -90,15 +94,17 @@ def computeTrackKm(points):
     return np.asarray(kms)
 
 
-def plotDistElevation():
+def plotDistElevation(interestPoints, dat):
     """
     plots the change in elevation(in meters) over distance(in km).
     """
-    kms = computeTrackKm(points)
-    elevations = computeTrackElevation(points, dat)
+    kms = computeTrackKm(interestPoints)
+    elevations = computeTrackElevation(interestPoints, dat)
 
     fig, ax = plt.subplots()
     ax.plot(kms, elevations)
+
+    ax.scatter(interestPoints[:, 0], interestPoints[:, 1], color='r', s=10, edgecolors='black')
 
     # label axis:
     plt.xlabel('Distance (km)')
@@ -114,22 +120,64 @@ def plotDistElevation():
 
 
 # slope Representation (for shingling: representing the tracks as vector of enums- percentage of slope) #
-# TODO
+def computeSlope(trackPoints, tick):
+    dat = make_elev_map(PARIS_ELEV_MAP)
+    trackElevs = computeTrackElevation(trackPoints, dat)
+
+    trackKms = computeTrackKm(trackPoints)
+    kmMarks = np.arange(0, trackKms[-1], tick / 2)
+    # handles the last segment of track- ignore it or take more than documented-
+    # if we are past the midpoint of the segment:
+    if trackKms[-1] > kmMarks[-1] + (tick / 4):
+        np.append(kmMarks, kmMarks[-1] + tick / 2)
+
+    # interpolate the elevation values at kmMarks:
+    elevMarks = np.interp(kmMarks, trackKms, trackElevs)
+
+    # TODO: FOR VISUALIZING-
+    plotDistElevation(np.stack((kmMarks, elevMarks), axis=-1), dat)
+
+    # get slopes of all sections:
+    slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight lien
+    slopes = np.array([math.degrees(rad) for rad in np.arctan(slopes)])  # the slope in degrees
+
+    return slopes
+
+
+def slopesSanityCheck():
+    kms = np.array([0, 1, 2, 3, 4, 5])
+    elevs = np.array([0, 1, 2, 0, 0, 0])
+    slopes = (elevs[2:] - elevs[:-2]) / 2
+    slopes = [math.degrees(rad) for rad in np.arctan(slopes)]
+    print(slopes)
+
+    fig, ax = plt.subplots()
+    ax.plot(kms, elevs)
+    ax.scatter(kms, elevs, color='r', s=10, edgecolors='red')
+    # label axis:
+    plt.xlabel('Distance (km)')
+    plt.ylabel('Elevation (meters)')
+    plt.show()
 
 
 if __name__ == "__main__":
-
-    # get track gps points (lat, lon):
+    # # get track gps points (lat, lon):
     data_collector = odc.OsmDataCollector(PARIS_COORS)
     track = data_collector.tracks[0]
     points = track.extract_gps_points()
     points = points.to_numpy()[:, :2]
 
-    # create elevation map of the area:
+    # # create elevation map of the area:
     dat = make_elev_map(PARIS_ELEV_MAP)
     # fig, ax = plt.subplots()
     # im = ax.imshow(dat[::-1, :], cmap='gray')
     # plt.show()
 
-    # plots the change in elevation(in meters) over distance (in km):
-    plotDistElevation()
+    # # compute slopes, plot the change in elevation(in meters) over distance (in km). marking kmMark points
+    # # according to the spacing:
+    slopes = computeSlope(points, 0.5)
+    print(slopes)
+
+    # Slopes sanity check:
+    slopesSanityCheck()
+
