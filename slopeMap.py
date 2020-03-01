@@ -180,4 +180,3 @@ if __name__ == "__main__":
 
     # Slopes sanity check:
     slopesSanityCheck()
-
