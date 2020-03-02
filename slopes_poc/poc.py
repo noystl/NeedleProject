@@ -1,5 +1,7 @@
 from datasketch import MinHash, MinHashLSH
 from slopes_poc import data_generator as genDat
+import slopeMap as sm
+import numpy as np
 import pandas as pd
 
 """
@@ -10,14 +12,14 @@ shingles vector, and use MinHash LSH to compare it efficiently with other tracks
 SHINGLE_LENGTH = 50  # just a random number, should be modified later.
 
 
-def get_shingles(points: pd.DataFrame) -> set:  # Waiting for Bar's Implementation
+def get_shingles(points: pd.DataFrame) -> set:
     """
     Converts the given track into a set of shingles.
     :param points: a pandas df containing the lat lon of the points consisting a gps track.
     :return: a set of the slope-shingles appearing in the track.
     """
-    shing_set = set()
-
+    slopes = (sm.computeSlope(points.to_numpy(), SHINGLE_LENGTH)).floor()
+    shing_set = set([np.unique(slope) for slope in slopes])
     return shing_set
 
 

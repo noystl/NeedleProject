@@ -3,7 +3,7 @@ import numpy as np
 import math
 import OsmDataCollector as odc
 
-BAIERSBRONN_COORS = [8.1584, 48.4688, 8.4797, 48.6291]
+PARIS_COORS = [2.3314, 48.8461, 2.3798, 48.8643]
 
 
 def generate_osm_track() -> pd.DataFrame:
@@ -12,7 +12,7 @@ def generate_osm_track() -> pd.DataFrame:
     find the closest track to this one.
     :return: pandas df as described above.
     """
-    data_collector = odc.OsmDataCollector(BAIERSBRONN_COORS)
+    data_collector = odc.OsmDataCollector(PARIS_COORS)
     track = data_collector.tracks[0]
     return track.extract_gps_points().iloc[:, :-1]
 
