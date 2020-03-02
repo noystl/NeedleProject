@@ -1,8 +1,29 @@
 from selenium import webdriver
 import json
 import os
-from PointTag import PointTag
+import gpxpy
+import pandas as pd
+import slopeMap as sm
 import numpy as np
+
+DIR_PATH = 'hp_tracks'
+
+MAX_TRACK_LEN = 30
+LEN_SPACING = 5
+TICK = 0.25
+
+
+def setup():
+    """
+    creates a firefox driver which is capable of downloading files without popups
+    """
+    profile = webdriver.FirefoxProfile()
+    profile.set_preference('browser.download.folderList', 2)  # custom location
+    profile.set_preference('browser.download.manager.showWhenStarting', False)
+    profile.set_preference('browser.download.dir', 'hp_tracks')
+    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
+    driver = webdriver.Firefox(firefox_profile=profile)
+    return driver
 
 
 def log_in(driver):
@@ -25,114 +46,13 @@ def log_in(driver):
     return
 
 
-def best_of(driver):
-    """
-    goes to best of page in hikingproject
-    """
-    elem = driver.find_element_by_link_text("Best Of")
-    elem.click()
-
-
-def collect_data(driver):
-    """
-    downloads gpx of path and writes text to data file
-    """
-    elems = driver.find_elements_by_xpath("//div[@class='card cdr-card']")
-    url = driver.current_url
-    index = len(elems)
-    i = 0
-    after = os.listdir('C:\\Users\\Matan Pinkas\\Documents\\tracks')
-    data = {}
-    
-    while i < index:
-        before = after
-        elems[i].click()
-        data2 = get_page_data(driver)
-        dnld = driver.find_element_by_link_text("GPX File")
-        dnld.click()
-        driver.get(url)
-        after = os.listdir('C:\\Users\\Matan Pinkas\\Documents\\tracks')
-        change = set(after) - set(before)
-        name = change.pop()
-        data2['gpx name'] = name
-        i += 1
-        data[i] = data2
-        elems = driver.find_elements_by_xpath("//div[@class='card cdr-card']")
-    save_data(data)
-
-
-def collect_data_by_url_list(driver, urls, data, index=0):
-    """
-    downloads gpx of given trails
-    :param driver: selenium webdriver
-    :param urls: list of urls of web pages in hikingproject.com
-    :param data: a dict containing data gathered perviously
-    :param index: number of trails collected before - 1
-    """
-    after = os.listdir('C:\\Users\\Matan Pinkas\\Documents\\tracks')
-    for i in range(len(urls)):
-        before = after
-        driver.get(urls[i])
-        page_data = get_page_data(driver)
-        download_gpx = driver.find_element_by_link_text("GPX File")
-        download_gpx.click()
-        after = os.listdir('C:\\Users\\Matan Pinkas\\Documents\\tracks')
-        change = set(after) - set(before)
-        name = change.pop()
-        page_data['gpx_name'] = name
-        data[str(i + index)] = page_data
-    return data
-
-
-def save_data(data, index):
-    path = 'C:\\Users\\Matan Pinkas\\Documents\\tracks\\data' + str(index) + '.json'
-    with open(path, 'w') as f:
-        json.dump(data, f)
-
-
-def setup():
-    """
-    creates a firefox driver which is capable of downloading files without popups
-    """
-    profile = webdriver.FirefoxProfile()
-    profile.set_preference('browser.download.folderList', 2)  # custom location
-    profile.set_preference('browser.download.manager.showWhenStarting', False)
-    profile.set_preference('browser.download.dir', 'C:\\Users\\Matan Pinkas\\Documents\\tracks')
-    profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
-    driver = webdriver.Firefox(firefox_profile=profile)
-    return driver
-
-
-def get_page_data(driver):
-    """
-    gets data from a trail page in hikingproject
-     (returns list of form [name, distance(km),difficulty, features] (features is a list of string of features)
-    """
-    res = {}
-    e = driver.find_element_by_xpath("//h1[@id='trail-title']")
-    res['track name'] = e.text
-    e = driver.find_elements_by_xpath("//div[@class='stat-block mx-1 pb-2']")[0]
-    txt = e.text
-    txt = txt.split()
-    res['length (km)'] = txt[1]
-    res['difficulty'] = txt[-1]
-    try:
-        features_element = driver.find_element_by_xpath("//span[@class='font-body pl-half']")
-        features = features_element.text.split(" · ")
-        res['features'] = features
-    except:  # basically should only fail when a page doesnt have features
-        features = []
-        res['features'] = features
-    return res
-
-
 def homepage(driver):
     driver.get("https://www.hikingproject.com/")
 
 
 def trails_in_urls(driver, name):
     """
-    return a list of urls (strings) for paths in <name> (example Israel, Itay, France...)
+    return a list of urls (strings) for paths in <name> (example Israel, Italy, France...)
     """
     homepage(driver)
     query = "//a[@title='" + name + "']"
@@ -155,65 +75,101 @@ def trails_in_urls(driver, name):
     return trail_urls
 
 
-def conv_track_data ():
-    with open('C:\\Users\\Matan Pinkas\\Documents\\tracks\\data.json') as f:
-        data = json.load(f)
-    for i in data.keys():
-        data[i]['features'] = check_list(data[i]['features'])
-    save_data(data, 666)
+def get_page_data(driver):
+    """
+    gets data from a trail page in the hiking project: tracks length and track difficulty.
+    """
+    e = driver.find_elements_by_xpath("//div[@class='stat-block mx-1 pb-2']")[0]
+    txt = e.text
+    txt = txt.split()
+    track_len = txt[1]
+    track_dif = txt[-1]
+    return track_len, track_dif
 
 
+def getTick(length):
+    """
+    returns the tick according to the track's length supplied.
+    :param length: a track's length (km)
+    :return: in
+    """
+    ranges = np.arange(0, MAX_TRACK_LEN, LEN_SPACING)
+    for i in length(ranges) - 1:
+        if ranges[i] < length <= ranges[i-1]:
+            return TICK * (i + 1)
 
-def check_list(features):
 
-    new_features = []
-    if 'River/Creek' in features:
-        new_features.append(PointTag.RIVER.value)
-    if 'Waterfall' in features:
-        new_features.append(PointTag.WATERFALL.value)
-    if 'Birding' in features:
-        new_features.append(PointTag.BIRDING.value)
-    if 'Cave' in features:
-        new_features.append(PointTag.CAVE.value)
-    if 'Lake' in features:
-        new_features.append(PointTag.WATER.value)
-    elif 'Fishing' in features:
-        new_features.append(PointTag.WATER.value)
-    elif 'Swimming' in features:
-        new_features.append(PointTag.WATER.value)
-    if 'Geological Significance' in features:
-        new_features.append(PointTag.GEOLOGIC.value)
-    if 'Historical Significance' in features:
-        new_features.append(PointTag.HISTORIC.value)
-    return new_features
+def getLengthTag(trackLength):
+    if trackLength % LEN_SPACING == 0:
+        return trackLength // LEN_SPACING - 1
+    return trackLength // LEN_SPACING
 
+
+def save_data(data, index):
+    for i in np.arange(MAX_TRACK_LEN // LEN_SPACING):
+        path = os.path.join(DIR_PATH, 'L' + i + '_' + str(index) + '.json')
+        with open(path, 'w') as f:
+            json.dump(data[i], f)
+
+
+def collect_data_by_url_list(driver, urls, index):
+    """
+    downloads gpx of given trails
+    :param driver: selenium webdriver
+    :param urls: list of urls of web pages in hikingproject.com
+    :param index: number of state
+    """
+    data = [dict() for x in range(MAX_TRACK_LEN // LEN_SPACING)]
+
+    for i in range(len(urls)):
+        driver.get(urls[i])
+
+        # get track's length and difficulty from site:
+        track_len, track_dif = get_page_data(driver)
+
+        # download gpx file:
+        download_gpx = driver.find_element_by_link_text("GPX File")
+        download_gpx.click()
+
+        # open gpx file:
+        gpx_file = open('test_files/cerknicko-jezero.gpx', 'r')
+        gpx = gpxpy.parse(gpx_file)
+
+        # get elevations:
+        trackElev = pd.DataFrame([{'ele': p.latitude} for p in gpx.tracks[0][0].points])
+
+        # get points array:
+        points = pd.DataFrame([{'lat': p.latitude, 'lon': p.longitude, 'time': p.time}
+                               for p in gpx.tracks[0][0].points])
+        # compute slopes:
+        tick = getTick(track_len)
+        slopes = sm.computeSlope(points, trackElev, tick)
+
+        # save track to the correct dict (according to it's length):
+        len_tag = getLengthTag(track_len)
+        data[len_tag][str(i) + '_' + str(index)] = [slopes, track_dif]
+    save_data(data, index)
 
 
 if __name__ == "__main__":
 
     # countries crawled so far - Australia, Brazil, France, Italy, Switzerland, South Africa, United Kingdom
     # ,'Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont'
-    # countries = ['Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont']
-    # ff_driver = setup()
-    # homepage(ff_driver)
-    # log_in(ff_driver)
-    # with open('C:\\Users\\Matan Pinkas\\Documents\\tracks\\data.json') as f:
-    #     data = json.load(f)
-    # keys = data.keys()
-    # index = []
-    # for key in keys:
-    #     index.append(int(key))
-    # index = np.array(index)
-    # index = np.amax(index) + 1
-    # c = 0
-    # for i in range(len(countries)):
-    #     print(countries[i])
-    #     trail_urls = trails_in_urls(ff_driver, countries[i])
-    #     collect_data_by_url_list(ff_driver, trail_urls, data, index)
-    #     index += len(trail_urls)
-    #     c += 1
-    #     save_data(data, c)
-    with open('C:\\Users\\Matan Pinkas\\Documents\\tracks\\data666.json') as f:
-        data = json.load(f)
-    conv_track_data()
-    x = 1
+    countries = ['Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont']
+    ff_driver = setup()
+    homepage(ff_driver)
+    log_in(ff_driver)
+
+    for i in range(len(countries)):
+        print(countries[i])
+        trail_urls = trails_in_urls(ff_driver, countries[i])
+        collect_data_by_url_list(ff_driver, trail_urls, i)
+
+    # TERMINOLOGY EXPLAINED:
+    # every state has a code <i>.
+    # in collect_data_by_url_list we save the tracks in dicts by length, and the dicts we save to files:
+    # each dict is saved to a file under the name: "L<k>_<i>.json", where <k> represents the lengths
+    # range of the tracks in the dict, cultivated in the state <i>.
+    # the keys of the tracks in a dict are: "<i>_<j>". it is a string where <j> is the number of the
+    # track cultivated in the state <i>.
+
