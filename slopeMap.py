@@ -11,7 +11,7 @@ import os
 import math
 import mplleaflet
 import numpy as np
-import OsmDataCollector as odc
+import OsmCollector as odc
 import matplotlib.pyplot as plt
 from geopy.distance import distance
 import scipy.ndimage
