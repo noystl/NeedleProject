@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 1  # This is the number of gpx files we download from osm.
+NUMBER_OF_WANTED_FILES = 2  # This is the number of gpx files we download from osm.
 SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
@@ -28,6 +28,7 @@ class OsmDataCollector:
         in: https://www.openstreetmap.org/#map=12/48.5490/8.3191 (search the desired place, and press "export")
         For example:  [2.3295, 48.8586, 2.3422, 48.8636] is the bounding box representing the area of the Louvre museum.
         """
+        self.id = 0
         self.box = bounding_box
         self.overpass_api = overpy.Overpass()
         self.interest_points_dict = {}  # Contains the interest points coordinates by tag.
@@ -52,7 +53,7 @@ class OsmDataCollector:
         """
         if os.path.isdir(DIR_PATH):
             shutil.rmtree(DIR_PATH)
-        os.mkdir(DIR_PATH)
+        os.makedirs(DIR_PATH)
         print("saving gpx files...")
 
         for i in range(NUMBER_OF_WANTED_FILES):
@@ -74,7 +75,8 @@ class OsmDataCollector:
                 for seg in track.segments:
                     if seg.points[0].time is None:  # dismisses private segments
                         continue
-                    curr_track = OsmTrack(seg)
+                    curr_track = OsmTrack(seg, self.id)
+                    self.id += 1
                     if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50:
                         continue
                     self.tracks.append(curr_track)
