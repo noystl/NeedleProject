@@ -89,31 +89,29 @@ def computeTrackKm(points):  # TODO: compare with Noy's implementation of gettin
     d = 0
     kms = [0]
     for i in range(len(points) - 1):
-        d += distance(points[i], points[i + 1]).m / 1000  # converted to kms
+        d += distance(points[i], points[i + 1]).km
         kms.append(d)
     return np.asarray(kms)
 
 
-def plotDistElevation(points, elevations):
+def plotDistElevation(kms, elevations):
     """
     plots the change in elevation(in meters) over distance(in km).
-    :param points: np array of length n, holding the track points.
-    :param elevations: np array of length n, holding the elevations at track points.
+    :param kms: np array of length n, holding the track points, in every round km.
+    :param elevations: np array of length n, holding the elevations at kms.
     """
-    kms = computeTrackKm(points)
-
     fig, ax = plt.subplots()
     ax.plot(kms, elevations)
 
-    ax.scatter(points[:, 0], points[:, 1], color='r', s=10, edgecolors='black')
+    ax.scatter(kms, elevations, color='r', s=10, edgecolors='black')
 
     # label axis:
     plt.xlabel('Distance (km)')
     plt.ylabel('Elevation (meters)')
 
-    # change y axis range to capture representation of elevation:
+    # # change y axis range to capture representation of elevation:
     # plt.axis([0, np.amax(kms), 0, np.amax(elevations) + 10])
-    # change y axis mark points to represent kms:
+    # # change y axis mark points to represent kms:
     # start, end = ax.get_xlim()
     # ax.xaxis.set_ticks(np.arange(start, end, 1))
 
@@ -121,11 +119,9 @@ def plotDistElevation(points, elevations):
 
 
 # slope Representation (for shingling: representing the tracks as vector of enums- percentage of slope) #
-
-
 def computeSlope(trackPoints, trackElevs, tick):
     trackKms = computeTrackKm(trackPoints)
-    kmMarks = np.arange(0, trackKms[-1], tick / 2)
+    kmMarks = np.arange(0, trackKms[-1] + 1, tick / 2)
     # handles the last segment of track- ignore it or take more than documented-
     # if we are past the midpoint of the segment:
     if trackKms[-1] > kmMarks[-1] + (tick / 4):
@@ -135,11 +131,11 @@ def computeSlope(trackPoints, trackElevs, tick):
     elevMarks = np.interp(kmMarks, trackKms, trackElevs)
 
     # TODO: FOR VISUALIZING-
-    plotDistElevation(np.stack((kmMarks, elevMarks), axis=-1))
+    plotDistElevation(kmMarks, elevMarks)
 
     # get slopes of all sections:
     slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight lien
-    slopes = np.array([math.degrees(rad) for rad in np.arctan(slopes)])  # the slope in degrees
+    slopes = [math.degrees(rad) for rad in np.arctan(slopes)]  # the slope in degrees
 
     return slopes
 
@@ -161,17 +157,17 @@ def slopesSanityCheck():
 
 
 if __name__ == "__main__":
-    # # get track gps points (lat, lon):
-    data_collector = odc.OsmDataCollector(PARIS_COORS)
-    track = data_collector.tracks[0]
-    points = track.extract_gps_points()
-    points = points.to_numpy()[:, :2]
-    elevs = computeTrackElevation(points)
-
-    # # compute slopes, plot the change in elevation(in meters) over distance (in km). marking kmMark points
-    # # according to the spacing:
-    slopes = computeSlope(points, elevs, 0.5)
-    print(slopes)
+    # # # get track gps points (lat, lon):
+    # data_collector = odc.OsmDataCollector(PARIS_COORS)
+    # track = data_collector.tracks[0]
+    # points = track.extract_gps_points()
+    # points = points.to_numpy()[:, :2]
+    # elevs = computeTrackElevation(points)
+    #
+    # # # compute slopes, plot the change in elevation(in meters) over distance (in km). marking kmMark points
+    # # # according to the spacing:
+    # slopes = computeSlope(points, elevs, 0.5)
+    # print(slopes)
 
     # Slopes sanity check:
     slopesSanityCheck()
