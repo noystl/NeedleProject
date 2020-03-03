@@ -6,7 +6,8 @@ import pandas as pd
 import slopeMap as sm
 import numpy as np
 
-DIR_PATH = 'hp_tracks'
+GPX_DIR_PATH = 'hp_gpx'
+TRACKS_DIR_PATH = 'hp_tracks'
 
 MAX_TRACK_LEN = 30
 LEN_SPACING = 5
@@ -17,10 +18,15 @@ def setup():
     """
     creates a firefox driver which is capable of downloading files without popups
     """
+    print("setup")
     profile = webdriver.FirefoxProfile()
-    profile.set_preference('browser.download.folderList', 2)  # custom location
+    profile.set_preference('browser.download.folderList', 2)
     profile.set_preference('browser.download.manager.showWhenStarting', False)
-    profile.set_preference('browser.download.dir', 'hp_tracks')
+
+    if not os.path.exists(GPX_DIR_PATH):
+        os.makedirs(GPX_DIR_PATH)
+
+    profile.set_preference('browser.download.dir', os.path.abspath(GPX_DIR_PATH))
     profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
     driver = webdriver.Firefox(firefox_profile=profile)
     return driver
@@ -30,6 +36,8 @@ def log_in(driver):
     """
     logs into hikingproject.com
     """
+    print("log in")
+    homepage(driver)
     elem = driver.find_element_by_link_text("Sign In")
     elem.click()
     elem_email = driver.find_element_by_xpath("//input[@placeholder='Log in with email']")
@@ -47,6 +55,7 @@ def log_in(driver):
 
 
 def homepage(driver):
+    print("homepage")
     driver.get("https://www.hikingproject.com/")
 
 
@@ -75,6 +84,13 @@ def trails_in_urls(driver, name):
     return trail_urls
 
 
+def get_download_file_name(before, path):
+    after = os.listdir(path)
+    change = set(after) - set(before)
+    if len(change) == 1:
+        return change.pop()
+
+
 def get_page_data(driver):
     """
     gets data from a trail page in the hiking project: tracks length and track difficulty.
@@ -99,71 +115,88 @@ def getTick(length):
             return TICK * (i + 1)
 
 
-def getLengthTag(trackLength):
+def get_length_tag(trackLength):
     if trackLength % LEN_SPACING == 0:
         return trackLength // LEN_SPACING - 1
     return trackLength // LEN_SPACING
 
 
 def save_data(data, index):
+    if not os.path.exists(TRACKS_DIR_PATH):
+        os.makedirs(TRACKS_DIR_PATH)
     for i in np.arange(MAX_TRACK_LEN // LEN_SPACING):
-        path = os.path.join(DIR_PATH, 'L' + i + '_' + str(index) + '.json')
+        path = os.path.join(TRACKS_DIR_PATH, 'L' + i + '_' + str(index) + '.json')
         with open(path, 'w') as f:
             json.dump(data[i], f)
 
 
-def collect_data_by_url_list(driver, urls, index):
+def collect_tracks_data(driver, urls, index):
     """
     downloads gpx of given trails
     :param driver: selenium webdriver
     :param urls: list of urls of web pages in hikingproject.com
     :param index: number of state
     """
-    data = [dict() for x in range(MAX_TRACK_LEN // LEN_SPACING)]
+    features = {}
 
-    for i in range(len(urls)):
+    # saves gpx files:
+    files_so_far = len([name for name in os.listdir(GPX_DIR_PATH) if os.path.isfile(name)])  # TODO
+    for i in np.arange(files_so_far, len(urls) + 1):
         driver.get(urls[i])
 
         # get track's length and difficulty from site:
         track_len, track_dif = get_page_data(driver)
 
         # download gpx file:
-        download_gpx = driver.find_element_by_link_text("GPX File")
-        download_gpx.click()
+        before = os.listdir('/home/jason/Downloads')
+        driver.find_element_by_link_text("GPX File").click()
+        after = os.listdir('/home/jason/Downloads')
+        change = set(after) - set(before)
+        filename = change.pop()
+
+        features[i] = [filename, track_len, track_dif]
+    return features
+
+
+def process_tracks_data(features, index):
+    data = [dict() for x in range(MAX_TRACK_LEN // LEN_SPACING)]
+    points, trackElev = pd.DataFrame({}), pd.DataFrame({})
+
+    for i in range(len(features)):
+        filename, track_len, track_dif = features[i]
 
         # open gpx file:
-        gpx_file = open('test_files/cerknicko-jezero.gpx', 'r')
+        gpx_file = open(os.path.join(GPX_DIR_PATH, filename), 'r', encoding="utf8")
         gpx = gpxpy.parse(gpx_file)
 
-        # get elevations:
-        trackElev = pd.DataFrame([{'ele': p.latitude} for p in gpx.tracks[0][0].points])
+        # get points array & elevations:
+        for track in gpx.tracks:
+            for seg in track.segments:
+                points = pd.DataFrame([{'lat': p.latitude, 'lon': p.longitude, 'time': p.time} for p in seg.points])
+                trackElev = pd.DataFrame([{'ele': p.latitude} for p in seg.points])
 
-        # get points array:
-        points = pd.DataFrame([{'lat': p.latitude, 'lon': p.longitude, 'time': p.time}
-                               for p in gpx.tracks[0][0].points])
         # compute slopes:
         tick = getTick(track_len)
         slopes = sm.computeSlope(points, trackElev, tick)
 
         # save track to the correct dict (according to it's length):
-        len_tag = getLengthTag(track_len)
+        len_tag = get_length_tag(track_len)
         data[len_tag][str(i) + '_' + str(index)] = [slopes, track_dif]
     save_data(data, index)
 
 
 if __name__ == "__main__":
-
     # countries crawled so far - Australia, Brazil, France, Italy, Switzerland, South Africa, United Kingdom
     # ,'Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont'
-    countries = ['Alaska', 'Alabama', 'Illinois', 'Florida', 'Ohio', 'Rhode Island', 'Vermont']
-    ff_driver = setup()
-    homepage(ff_driver)
+    countries = ['Australia']
+    ff_driver = setup()     # create gpx folder, sets up driver
     log_in(ff_driver)
 
     for i in range(len(countries)):
         print(countries[i])
         trail_urls = trails_in_urls(ff_driver, countries[i])
-        collect_data_by_url_list(ff_driver, trail_urls, i)
+        fs = collect_tracks_data(ff_driver, trail_urls, i)
+        process_tracks_data(fs, i)
 
     # TERMINOLOGY EXPLAINED:
     # every state has a code <i>.
