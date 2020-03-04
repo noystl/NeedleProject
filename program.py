@@ -18,10 +18,16 @@ def main():
 
     # (2) SUPPORT USER QUERIES:
 
+    stay = 1
+    while stay:
+
     # get query-
 
     # get response to query-
 
     # present response to user-
 
+    # end-
+
+        stay = 0
 
