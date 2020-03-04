@@ -5,8 +5,19 @@ def main(to_crawl):
     # (1) PREPARE DATA:
 
     # get hp data-
-    hpc = hpcrawler.HpCrawler(to_crawl)
-    print(hpc.load_seen())
+    seen = {}
+    while seen.keys() != set(to_crawl):
+        try:
+            hpcrawler.HpCrawler(to_crawl)
+        except Exception as e:
+            print("\n", str(e), "\nstarting again..\n")
+            seen = hpcrawler.HpCrawler.load_seen()
+            print(seen)
+            continue
+
+    # hpcrawler.HpCrawler(to_crawl)
+    # seen = hpcrawler.HpCrawler.load_seen()
+    # print(seen)
 
     # get osm data (completed from hp data)-
 
@@ -33,5 +44,5 @@ if __name__ == '__main__':
     # to_crawl = ['Australia', 'Brazil', 'France', 'Italy', 'Switzerland', 'South Africa', 'United Kingdom',
     #
 
-    to_crawl = ['Australia', 'Brazil', 'France']
+    to_crawl = ['Brazil', 'Australia', 'France', 'Italy', 'Switzerland']
     main(to_crawl)

@@ -25,10 +25,9 @@ LOUVRE_ELEV_MAP = ''
 FELDBERG_ELEV_MAP = ''
 BAIERSBRONN_ELEV_MAP = ''
 
-
-MAX_TRACK_LEN = 31
+MAX_TRACK_LEN = 1001
 LEN_SPACING = 5
-TICK = 25
+TICK = 0.25
 
 
 def get_num_of_len_tags():
@@ -50,7 +49,7 @@ def get_tick(track_len):
     ranges = np.arange(0, MAX_TRACK_LEN, LEN_SPACING)
     for i in range(len(ranges) - 1):
         if ranges[i] < track_len <= ranges[i+1]:
-            return TICK * (i + 1) / 100
+            return (TICK * 100) * (i + 1) / 100
 
 
 def get_length_tag(track_len):
@@ -59,7 +58,7 @@ def get_length_tag(track_len):
     :return: an int representing the length tag of the given  track's length
     """
     if track_len % LEN_SPACING == 0:
-        return track_len // LEN_SPACING - 1
+        return int(track_len // LEN_SPACING - 1)
     return int(track_len // LEN_SPACING)
 
 # Elevation Map #
