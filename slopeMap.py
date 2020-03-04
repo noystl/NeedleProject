@@ -9,13 +9,10 @@
 
 import os
 import math
-import mplleaflet
 import numpy as np
 import OsmCollector as odc
 import matplotlib.pyplot as plt
 from geopy.distance import distance
-import scipy.ndimage
-RAD_TO_DEG = 1 / 57.2957795
 
 
 PARIS_COORS = [2.3314, 48.8461, 2.3798, 48.8643]
@@ -28,6 +25,42 @@ LOUVRE_ELEV_MAP = ''
 FELDBERG_ELEV_MAP = ''
 BAIERSBRONN_ELEV_MAP = ''
 
+
+MAX_TRACK_LEN = 31
+LEN_SPACING = 5
+TICK = 25
+
+
+def get_num_of_len_tags():
+    """
+    :return: the number of different categories of length.
+    """
+    return MAX_TRACK_LEN // LEN_SPACING
+
+
+def get_tick(track_len):
+    """
+    returns the tick according to the track's length supplied.
+    the tag is computed from the formula:
+    for int i in [0,
+    return [LEN_SPACING * i, LEN_SPACING * (i + 1)] =  TICK * (i + 1) / 100
+    :param track_len: a track's length (km)
+    :return: double (km)
+    """
+    ranges = np.arange(0, MAX_TRACK_LEN, LEN_SPACING)
+    for i in range(len(ranges) - 1):
+        if ranges[i] < track_len <= ranges[i+1]:
+            return TICK * (i + 1) / 100
+
+
+def get_length_tag(track_len):
+    """
+    :param track_len: int representing track's length in km
+    :return: an int representing the length tag of the given  track's length
+    """
+    if track_len % LEN_SPACING == 0:
+        return track_len // LEN_SPACING - 1
+    return int(track_len // LEN_SPACING)
 
 # Elevation Map #
 def make_elev_map(area_file):
@@ -64,7 +97,7 @@ def get_elev_atpt(elev_map, lon, lat, x, y):
 
 
 # Elevation representation (for graph display- testing intuition) #
-def computeTrackElevation(points):
+def compute_track_elevation(points):
     """
     computes the elevation values along the track, represented by it's points.
     :param points: 2-dim np array of the track's points: (lat, lon).
@@ -79,7 +112,7 @@ def computeTrackElevation(points):
     return np.asarray(elevations)
 
 
-def computeTrackKm(points):  # TODO: compare with Noy's implementation of getting the track's length
+def compute_track_km(points):  # TODO: compare with Noy's implementation of getting the track's length
     """
     computes the km values along the track, represented by it's points.
     distance over path in computed by: https://janakiev.com/blog/gps-points-distance-python/
@@ -94,7 +127,7 @@ def computeTrackKm(points):  # TODO: compare with Noy's implementation of gettin
     return np.asarray(kms)
 
 
-def plotDistElevation(kms, elevations):
+def plot_dist_elevation(kms, elevations):
     """
     plots the change in elevation(in meters) over distance(in km).
     :param kms: np array of length n, holding the track points, in every round km.
@@ -119,8 +152,8 @@ def plotDistElevation(kms, elevations):
 
 
 # slope Representation (for shingling: representing the tracks as vector of enums- percentage of slope) #
-def computeSlope(trackPoints, trackElevs, tick):
-    trackKms = computeTrackKm(trackPoints)
+def compute_slope(trackPoints, trackElevs, tick):
+    trackKms = compute_track_km(trackPoints)
     kmMarks = np.arange(0, trackKms[-1] + 1, tick / 2)
     # handles the last segment of track- ignore it or take more than documented-
     # if we are past the midpoint of the segment:
@@ -131,7 +164,7 @@ def computeSlope(trackPoints, trackElevs, tick):
     elevMarks = np.interp(kmMarks, trackKms, trackElevs)
 
     # TODO: FOR VISUALIZING-
-    plotDistElevation(kmMarks, elevMarks)
+    plot_dist_elevation(kmMarks, elevMarks)
 
     # get slopes of all sections:
     slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight lien
@@ -140,7 +173,7 @@ def computeSlope(trackPoints, trackElevs, tick):
     return slopes
 
 
-def slopesSanityCheck():
+def slopes_sanity_check():
     kms = np.array([0, 1, 2, 3, 4, 5])
     elevs = np.array([0, 1, 2, 0, 0, 0])
     slopes = (elevs[2:] - elevs[:-2]) / 2
@@ -170,4 +203,6 @@ if __name__ == "__main__":
     # print(slopes)
 
     # Slopes sanity check:
-    slopesSanityCheck()
+    slopes_sanity_check()
+
+
