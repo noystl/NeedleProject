@@ -164,7 +164,7 @@ def compute_slope(trackPoints, trackElevs, tick):
     elevMarks = np.interp(kmMarks, trackKms, trackElevs)
 
     # TODO: FOR VISUALIZING-
-    plot_dist_elevation(kmMarks, elevMarks)
+    # plot_dist_elevation(kmMarks, elevMarks)
 
     # get slopes of all sections:
     slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight lien
