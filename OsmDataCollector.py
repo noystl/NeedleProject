@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 2  # This is the number of gpx files we download from osm.
+NUMBER_OF_WANTED_FILES = 5  # This is the number of gpx files we download from osm.
 SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
@@ -131,19 +131,6 @@ class OsmDataCollector:
         self._get_gpx_files()
         self._collect_filtered_tracks()
         self._handle_interest_points()
-
-
-# def plot_by_interest(track: OsmTrack, ax):
-#     df = track.gps_points
-#     df = df.dropna()
-#     if (PointTag.HISTORIC and PointTag.WATER) in track.interest_points:
-#         ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
-#     elif PointTag.HISTORIC in track.interest_points:
-#         ax.plot(df['lon'], df['lat'], color='magenta', linewidth=3, alpha=0.5)
-#     elif PointTag.WATER in track.interest_points:
-#         ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
-#     else:
-#         ax.plot(df['lon'], df['lat'], color='black', linewidth=3, alpha=0.5)
 
 
 def plot_by_shape(track: OsmTrack, ax):

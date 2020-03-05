@@ -12,4 +12,4 @@ class PointTag(Enum):
     WATER = "a body of water"  # Could be a lake, but also things like canals, moats etc.
     SPRING = "spring"
     GEOLOGIC = "geological"
-    HISTORIC = "Historic"
+    HISTORIC = "historic"
