@@ -4,6 +4,10 @@ the request.
 
 Command-Line Arguments Example:
 baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
+
+Note:
+Pay attention that we don't have a real osm-DB yet, so in order to run this module, please generate a fake DB first
+with createExampData.
 """
 
 
