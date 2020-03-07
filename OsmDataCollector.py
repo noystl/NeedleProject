@@ -49,7 +49,7 @@ class OsmDataCollector:
 
     def _get_gpx_files(self):
         """
-        Downloads GPX traces files from OSM.
+        Downloads GPX tracks files from OSM.
         """
         if os.path.isdir(DIR_PATH):
             shutil.rmtree(DIR_PATH)
