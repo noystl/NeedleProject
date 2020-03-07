@@ -117,7 +117,7 @@ class HpCrawler:
         if not os.path.exists(HpCrawler.tracks_dir_path):
             os.makedirs(HpCrawler.tracks_dir_path)
 
-        dict_of_len_path = os.path.join(HpCrawler.tracks_dir_path, str(len_tag))
+        dict_of_len_path = os.path.join(HpCrawler.tracks_dir_path, str(len_tag) + ".json")
         tracks_of_len = HpCrawler._load_dict(dict_of_len_path)
         tracks_of_len.update(track_dict)
         HpCrawler._save_dict(tracks_of_len, dict_of_len_path)
