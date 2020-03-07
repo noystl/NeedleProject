@@ -1,32 +1,16 @@
-#TODO:
-# (1) break file into modules-
-#       1. class for a elev map that can be questioned.
-#       2. file for the graph rep (?)
-#       3. file for the slopes rep (?)
-#       4. or a class that delivers the functionality of 3. , and omits 2. "on the way"(?)
-# (2) generalize the SITE_COORDS, and SITE_ELEV_MAP for the project to use, by creating a file for them (?)
-
-
 import os
 import math
 import numpy as np
 import matplotlib.pyplot as plt
 from geopy.distance import distance
+import OsmDataCollector as odc
 
+areas_paths = {'baiersbronn': ['N48E008', [48, 8]]}  # Other areas in the future :)
 
-PARIS_COORS = [2.3314, 48.8461, 2.3798, 48.8643]
-LOUVRE_COORS = [2.3295, 48.8586, 2.3422, 48.8636]
-FELDBERG_COORS = [8.1026, 48.3933, 8.183, 48.4335]
-BAIERSBRONN_COORS = [8.1584, 48.4688, 8.4797, 48.6291]
-
-PARIS_ELEV_MAP = 'N48E002.hgt'
-LOUVRE_ELEV_MAP = ''
-FELDBERG_ELEV_MAP = ''
-BAIERSBRONN_ELEV_MAP = ''
-
-MAX_TRACK_LEN = 1001
-LEN_SPACING = 5
-TICK = 0.25
+MAX_TRACK_LEN = 1001  # maximum supported track length
+LEN_SPACING = 5  # size of the "buckets" of the length_tag
+TICK = 0.25  # in kms
+DEG_GENERALIZE = 15  # size of "buckets for slopes, in degrees
 
 
 def get_num_of_len_tags():
@@ -60,19 +44,20 @@ def get_length_tag(track_len):
         return int(track_len // LEN_SPACING - 1)
     return int(track_len // LEN_SPACING)
 
+
 # Elevation Map #
-def make_elev_map(area_file):
+def make_elev_map(area_filename):
     """
-    creates an elevation map of the area depicted in the supplied file.
-    :param area_file: an hgt file holding the elevation values of the relevant tile.
+    creates an elevation map of the area depicted in the supplied file,
+    downloaded from: https://dwtkns.com/srtm30m/
+    :param area_filename: an hgt file holding the elevation values of the relevant tile.
     :return: 2-dim np array holding the elevation values of 30-meters "mini-tiles"
     in the supplied tile.
     """
-    siz = os.path.getsize(area_file)
+    siz = os.path.getsize(area_filename)
     dim = int(math.sqrt(siz / 2))
-    # assert dim * dim * 2 == siz, 'Invalid file size'
-    data = np.fromfile(area_file, np.dtype('>i2'), dim * dim).reshape((dim, dim))
-    return data
+    elev_map = np.fromfile(area_filename, np.dtype('>i2'), dim * dim).reshape((dim, dim))
+    return elev_map
 
 
 def get_elev_atpt(elev_map, lon, lat, x, y):
@@ -95,16 +80,18 @@ def get_elev_atpt(elev_map, lon, lat, x, y):
 
 
 # Elevation representation (for graph display- testing intuition) #
-def compute_track_elevation(points):
+def compute_track_elevation(elev_map, tile_rep, points):
     """
     computes the elevation values along the track, represented by it's points.
+    :param elev_map: 2d array of elevation in a grid (2d np array of ints)
+    :param tile_rep:
     :param points: 2-dim np array of the track's points: (lat, lon).
-    :return: the km values along the track.
-    """
-    dat = make_elev_map(PARIS_ELEV_MAP)
+    :return: the elevation values along the track.
+   """
+    dat = make_elev_map(elev_map)
     elevations = []
     for x_coor, y_coor in points:
-        x, y = get_elev_atpt(dat, 48, 2, x_coor, y_coor)
+        x, y = get_elev_atpt(dat, tile_rep[0], tile_rep[1], x_coor, y_coor)
         ele = dat[int(x)][int(y)]
         elevations.append(ele)
     return np.asarray(elevations)
@@ -149,24 +136,45 @@ def plot_dist_elevation(kms, elevations):
     plt.show()
 
 
-# slope Representation (for shingling: representing the tracks as vector of enums- percentage of slope) #
-def compute_slope(trackPoints, trackElevs, tick):
-    trackKms = compute_track_km(trackPoints)
+# slope Representation #
+def compute_slope(track_points, track_elevs, track_length):  # TODO: notify about the signature change
+    """
+    returns a python list of
+    :param track_points: 2-dim np array of the track's points: (lat, lon).
+    :param track_elevs: np array of length n, holding the elevations at points.
+    :param track_length: float
+    :return: python list of floats representing the angles (values are in [-90, 90],
+            all <DEG_GENERALIZE> degrees subsections are mapped to one value representing
+            the slope of that subsection)
+    """
+    tick = get_tick(track_length)
+    trackKms = compute_track_km(track_points)
     kmMarks = np.arange(0, trackKms[-1] + 1, tick / 2)
-    # handles the last segment of track- ignore it or take more than documented-
-    # if we are past the midpoint of the segment:
-    if trackKms[-1] > kmMarks[-1] + (tick / 4):
-        np.append(kmMarks, kmMarks[-1] + tick / 2)
+
+    # handles the last segment of track (to add it to kmMarks or not):
+    # there are two options: # TODO - Matan choose from the options the one you meant
+
+    # (1) gets the last multiple of tick / 2 that was seen in track, and discards the leftover track.
+    # DO NOTHING
+
+    # (2) add the last km value of the original track
+    # (NOTE: the last kmMark will probably not be a multiple of tick / 2)
+    #  ADD THIS CODE:
+    #  if trackKms[-1] > kmMarks[-1]:
+    #   np.append(kmMarks, trackKms[-1])
 
     # interpolate the elevation values at kmMarks:
-    elevMarks = np.interp(kmMarks, trackKms, trackElevs)
+    elevMarks = np.interp(kmMarks, trackKms, track_elevs)
 
     # TODO: FOR VISUALIZING-
     # plot_dist_elevation(kmMarks, elevMarks)
 
     # get slopes of all sections:
-    slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight lien
+    slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight line
     slopes = [math.degrees(rad) for rad in np.arctan(slopes)]  # the slope in degrees
+
+    # slopes associated to <DEG_GENERALIZE> degrees subsections:
+    slopes = [((math.floor(x) - (math.floor(x) % DEG_GENERALIZE))/DEG_GENERALIZE) for x in slopes]
 
     return slopes
 
@@ -188,17 +196,20 @@ def slopes_sanity_check():
 
 
 if __name__ == "__main__":
-    # # # get track gps points (lat, lon):
-    # data_collector = odc.OsmDataCollector(PARIS_COORS)
-    # track = data_collector.tracks[0]
-    # points = track.extract_gps_points()
-    # points = points.to_numpy()[:, :2]
-    # elevs = computeTrackElevation(points)
-    #
-    # # # compute slopes, plot the change in elevation(in meters) over distance (in km). marking kmMark points
-    # # # according to the spacing:
-    # slopes = computeSlope(points, elevs, 0.5)
-    # print(slopes)
+    # # get track gps points (lat, lon):
+    elev_map_path, tile_rep = areas_paths['baiersbronn']
+    BAIERSBRONN_COORS = [8.1584, 48.4688, 8.4797, 48.6291]
+
+    data_collector = odc.OsmDataCollector(BAIERSBRONN_COORS)
+    track = data_collector.tracks[0]
+    points = track.extract_gps_points()
+    points = points.to_numpy()[:, :2]
+    elevs = compute_track_elevation(elev_map_path, tile_rep, points)
+
+    # # compute slopes, plot the change in elevation(in meters) over distance (in km). marking kmMark points
+    # # according to the spacing:
+    slopes = compute_slope(points, elevs, track.length())  # TODO add getter in OSM
+    print(slopes)
 
     # Slopes sanity check:
     slopes_sanity_check()
