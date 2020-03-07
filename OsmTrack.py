@@ -135,9 +135,8 @@ class OsmTrack:
                                                                 'east': e}
                                                 }
 
-        where attributes is a list of the shingles values summing up the track properties:
-        [WATERFALL, BIRDING, RIVER, CAVE, WATER, SPRING, GEOLOGIC, HISTORIC,
-        SHORT, MEDIUM, LONG, EASY, INTERMEDIATE, DIFFICULT, LOOP, CURVE]
+        where attributes is a list of the enum values representing the properties the track has (only the properties
+        that holds for the current track appear in the list).
         """
         dict_repr = {}
         attributes = self.get_attributes_shingles()
