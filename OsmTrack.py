@@ -7,12 +7,6 @@ from TrackDifficulty import TrackDifficulty
 from TrackShape import TrackShape
 from geopy.distance import geodesic
 
-CLOSENESS_THRESH_METERS = 200
-LOOP_THRESH_METERS = 100
-SAMPLING_RATIO = 1 / 10
-MID_LENGTH_THRESH = 5  # Tracks who's length is between 20m to 40m are considered as medium-length track.
-LONG_THRESH = 20  # Tracks longer then 40m are considered long.
-
 
 class OsmTrack:
     """
@@ -20,6 +14,11 @@ class OsmTrack:
     """
 
     def __init__(self, segment, track_id):
+        self.CLOSENESS_THRESH_METERS = 200
+        self.LOOP_THRESH_METERS = 100
+        self.SAMPLING_RATIO = 1 / 10
+        self.MID_LENGTH_THRESH = 5  # Tracks who's length is between 20m to 40m are considered as medium-length track.
+        self.LONG_THRESH = 20  # Tracks longer then 40m are considered long.
         self.id = track_id
         self.segment = segment
         self.interest_points = set()  # Waterways, historic places, etc...
@@ -69,10 +68,10 @@ class OsmTrack:
         """
         min_dist = math.inf
         # We preform the check only on part of the points, to fasten the running time:
-        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * SAMPLING_RATIO), 1))
+        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * self.SAMPLING_RATIO), 1))
         for idx, track_point in sample.iterrows():
             min_dist = min(min_dist, geodesic([track_point.lat, track_point.lon], [point.lat, point.lon]).m)
-        return min_dist < CLOSENESS_THRESH_METERS
+        return min_dist < self.CLOSENESS_THRESH_METERS
 
     def extract_gps_points(self) -> pd.DataFrame:
         """
@@ -94,7 +93,7 @@ class OsmTrack:
         end_point_idx = self.gps_points.shape[0] - 1
         dist = geodesic([self.gps_points.lat[0], self.gps_points.lon[0]],
                         [self.gps_points.lat[end_point_idx], self.gps_points.lon[end_point_idx]]).m
-        return TrackShape.LOOP if dist < LOOP_THRESH_METERS else TrackShape.CURVE
+        return TrackShape.LOOP if dist < self.LOOP_THRESH_METERS else TrackShape.CURVE
 
     def get_track_boundaries(self) -> dict:
         """
@@ -116,9 +115,9 @@ class OsmTrack:
             shing.add(interest_point.value)
         shing.add(self.difficulty.value)
         shing.add(self.shape.value)
-        if self.length < MID_LENGTH_THRESH:
+        if self.length < self.MID_LENGTH_THRESH:
             shing.add(TrackLength.SHORT.value)
-        elif MID_LENGTH_THRESH <= self.length < LONG_THRESH:
+        elif self.MID_LENGTH_THRESH <= self.length < self.LONG_THRESH:
             shing.add(TrackLength.MEDIUM.value)
         else:
             shing.add(TrackLength.LONG.value)
