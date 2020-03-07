@@ -128,7 +128,6 @@ def add_shape_shing(shing_set: set, args: argparse.Namespace):
     shing_set.add(TrackShape.LOOP.value) if args.shape == 1 else shing_set.add(TrackShape.CURVE.value)
 
 
-# Todo: this is a code duplication of the slopes_poc branch, we should have a separate class for LSH-ing we can reuse.
 def get_min_hash(shingles: set) -> MinHash:
     """
     given a set of shingles, creates a MinHash object updated with those shingles.
