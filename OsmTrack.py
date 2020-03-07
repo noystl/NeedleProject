@@ -40,7 +40,7 @@ class OsmTrack:
         Calculated the average velocity of the track (in km per hour)
         :return: the velocity.
         """
-        times = pd.Series([p.time for p in self.segment.points], name='time')
+        times = self.gps_points['time']
         dt = np.diff(times.values) / np.timedelta64(1, 'h')
         dv = []
         for i in range(len(self.gps_points.lat) - 1):
