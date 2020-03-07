@@ -2,7 +2,7 @@ import os
 from OsmTrack import OsmTrack
 from PointTag import PointTag
 from TrackShape import TrackShape
-import gpxpy
+import gpxpy.gpx
 import wget
 import shutil
 import pandas as pd
@@ -70,16 +70,19 @@ class OsmDataCollector:
         print("saving tracks...")
         for filename in os.listdir(DIR_PATH):
             gpx_file = open(os.path.join(DIR_PATH, filename), 'r', encoding="utf8")
-            gpx = gpxpy.parse(gpx_file)
-            for track in gpx.tracks:
-                for seg in track.segments:
-                    if seg.points[0].time is None:  # dismisses private segments
-                        continue
-                    curr_track = OsmTrack(seg, self.id)
-                    self.id += 1
-                    if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50:
-                        continue
-                    self.tracks.append(curr_track)
+            try:
+                gpx = gpxpy.parse(gpx_file)
+                for track in gpx.tracks:
+                    for seg in track.segments:
+                        if seg.points[0].time is None:  # dismisses private segments
+                            continue
+                        curr_track = OsmTrack(seg, self.id)
+                        self.id += 1
+                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50:
+                            continue
+                        self.tracks.append(curr_track)
+            except gpxpy.gpx.GPXXMLSyntaxException:
+                print('gpx parsing error for' + filename)
 
     def _get_interest_points(self, node_tag: str) -> pd.DataFrame:
         """
