@@ -192,7 +192,6 @@ if __name__ == '__main__':
     user_shing = create_user_shingles(command_line_args)
     lsh = MinHashLSH(threshold=SIMILARITY_THRESH, num_perm=128)
     user_min_hash = get_min_hash(user_shing)
-    lsh.insert(USER_ID, user_min_hash)
 
     tracks_dict = get_osm_tracks(areas_paths[command_line_args.search_area])
     for track in tracks_dict:
@@ -203,6 +202,5 @@ if __name__ == '__main__':
     similar_tracks = lsh.query(user_min_hash)
 
     # For testing:
-    similar_tracks.remove(USER_ID)  # The user's shingle-set is similar to itself (so it always appears in the results).
     tests.pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)
     tests.plot_results(command_line_args, similar_tracks)
