@@ -286,8 +286,7 @@ class HpCrawler:
                     .to_numpy().reshape(len(points))
 
         # compute slopes:
-        tick = sm.get_tick(track_len)
-        slopes = sm.compute_slope(points, track_elev, tick)
+        slopes = sm.compute_slope(points, track_elev, track_len)
 
         # save track to the correct dict (according to the track's length):
         len_tag = sm.get_length_tag(track_len)
