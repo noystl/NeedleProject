@@ -10,7 +10,6 @@
 import os
 import math
 import numpy as np
-import OsmCollector as odc
 import matplotlib.pyplot as plt
 from geopy.distance import distance
 
