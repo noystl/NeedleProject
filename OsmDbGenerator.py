@@ -63,9 +63,9 @@ class OsmDbGenerator:
             self._create_dir(area_coor_dir_name)
 
             area_osm_data = OsmDataCollector(self.supported_areas[area_name])
-            tracks_dict = {'tracks': []}
+            tracks_dict = {'tracks': {}}
             for track in area_osm_data.tracks:
-                tracks_dict['tracks'].append(track.get_dict_repr())
+                tracks_dict['tracks'][track.id] = track.get_dict_repr()
                 track.gps_points.to_csv(area_coor_dir_name + str(track.id))
             with open(area_dir_name + '\\' + area_name + "_db.json", "w") as write_file:
                 json.dump(tracks_dict, write_file, indent=4)

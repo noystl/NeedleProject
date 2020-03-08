@@ -13,6 +13,8 @@ with createExampData.
 import argparse
 import json
 import os
+import folium
+import pandas as pd
 from UserRelated import ResultsTests as tests
 from datasketch import MinHash, MinHashLSH
 from PointTag import PointTag
@@ -180,6 +182,41 @@ def in_geo_limits(args: argparse.Namespace, track_data: dict) -> bool:
             track_data['boundaries']['west'] >= args.west_lim)
 
 
+def plot_output(args, results: list, tracks_data: dict):
+    """
+    Plots the similar tracks found and their attributes on an interactive map (kept in the file fol.html)
+    :param args: the command-line arguments we got from the user.
+    :param results: a list containing the ids of the osm-tracks the program decided were similar enough to the
+    user's request.
+    :param tracks_data: a dictionary containing the data we collected over the osm-tracks in the requested area.
+    """
+    colors_list = [
+        'red', 'green', 'orange', 'lightred', 'pink', 'black', 'blue', 'darkpurple',
+        'darkred', 'cadetblue', 'darkblue', 'darkgreen', 'purple', 'gray'
+    ]
+
+    # Calculate the center coordinate of the search area and create a map object in this area:
+    location_x = (args.north_lim + args.south_lim) / 2
+    location_y = (args.west_lim + args.east_lim) / 2
+    output_map = folium.Map(location=[location_x, location_y], zoom_start=13)
+
+    # Present the similar tracks on the map:
+    for result_id in results:
+        coors_rel_path = 'areas_databases\\' + args.search_area + '\\tracks_gps_points\\' + result_id
+        df = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), '..', coors_rel_path)))
+        points = [(row[0], row[1]) for row in df[['lat', 'lon']].values]
+
+        folium.PolyLine(points, color=colors_list[int(result_id) % len(colors_list)], opacity=1).add_to(output_map)
+
+        folium.Marker(
+            location=[points[-1][0], points[-1][1]],
+            popup='track ' + result_id + '\n' + str(tracks_data[result_id]['attributes']),
+            icon=folium.Icon(color=colors_list[int(result_id) % len(colors_list)], icon='info-sign')
+        ).add_to(output_map)
+
+    output_map.save('fol.html')
+
+
 if __name__ == '__main__':
     """
     Gets the user track preferences as command-line arguments, finds the most similar tracks to the request, and 
@@ -195,13 +232,13 @@ if __name__ == '__main__':
     user_min_hash = get_min_hash(user_shing)
 
     tracks_dict = get_osm_tracks(areas_paths[command_line_args.search_area])
-    for track in tracks_dict:
-        if in_geo_limits(command_line_args, track):
-            min_hash = get_min_hash(set(track['attributes']))
-            lsh.insert(track['id'], min_hash)
+    for track_id in tracks_dict:
+        if in_geo_limits(command_line_args, tracks_dict[track_id]):
+            min_hash = get_min_hash(set(tracks_dict[track_id]['attributes']))
+            lsh.insert(track_id, min_hash)
 
     similar_tracks = lsh.query(user_min_hash)
+    plot_output(command_line_args, similar_tracks, tracks_dict)
 
     # For testing:
     tests.pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)
-    tests.plot_results(command_line_args, similar_tracks)
