@@ -127,7 +127,6 @@ class OsmTrack:
         """
         Returns a representation of this track as a dictionary.
         :return: a dictionary of the the form:{
-                                                'id': X,
                                                 'attributes': [...],
                                                 'boundaries': {'north': n,
                                                                 'south': s,
@@ -141,7 +140,6 @@ class OsmTrack:
         dict_repr = {}
         attributes = self.get_attributes_shingles()
 
-        dict_repr['id'] = self.id
         dict_repr['attributes'] = list(attributes)
         dict_repr['boundaries'] = self.boundaries
         return dict_repr

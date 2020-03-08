@@ -28,16 +28,14 @@ def pretty_print_results(user_shingles: set, tracks_dict: dict, given_args, resu
 
     print('TRACKS FOUND: ')
     for track_id in result:
-        for track_data in tracks_dict:
-            if track_data['id'] == track_id:
-                print('Track id: ' + str(track_id))
-                print('Track attributes: ' + str(set(track_data['attributes'])))
-                print('Location: ')
-                print('\t North: ' + str(track_data['boundaries']['north']))
-                print('\t South: ' + str(track_data['boundaries']['south']))
-                print('\t East: ' + str(track_data['boundaries']['east']))
-                print('\t West: ' + str(track_data['boundaries']['west']))
-                print('\n')
+        print('Track id: ' + str(track_id))
+        print('Track attributes: ' + str(set(tracks_dict[track_id]['attributes'])))
+        print('Location: ')
+        print('\t North: ' + str(tracks_dict[track_id]['boundaries']['north']))
+        print('\t South: ' + str(tracks_dict[track_id]['boundaries']['south']))
+        print('\t East: ' + str(tracks_dict[track_id]['boundaries']['east']))
+        print('\t West: ' + str(tracks_dict[track_id]['boundaries']['west']))
+        print('\n')
 
 
 def draw_line(x1, x2, y1, y2, ax):
