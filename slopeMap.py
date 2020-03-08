@@ -8,13 +8,13 @@ import locale
 
 areas_paths = {'baiersbronn': ['N48E008', [48, 8]]}  # Other areas in the future :)
 
-MAX_TRACK_LEN = 10001  # maximum supported track length
+MAX_TRACK_LEN = 10001  # maximum supported track length - this parameter is obsolete
 LEN_SPACING = 5  # size of the "buckets" of the length_tag
 TICK = 0.25  # in kms
 DEG_GENERALIZE = 15  # size of "buckets for slopes, in degrees
 
 
-def get_num_of_len_tags():
+def get_num_of_len_tags():  # this function is obsolete
     """
     :return: the number of different categories of length.
     """
