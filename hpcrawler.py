@@ -6,7 +6,7 @@ import json
 import os
 import gpxpy
 import pandas as pd
-import SlopeMap as sm
+import slopeMap as sm
 import re
 
 # TODO: if we want to crawl more data from website after we've already established a data set,
