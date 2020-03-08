@@ -10,9 +10,9 @@ Pay attention that we don't have a real osm-DB yet, so in order to run this modu
 with createExampData.
 """
 
-
 import argparse
 import json
+import os
 from UserRelated import ResultsTests as tests
 from datasketch import MinHash, MinHashLSH
 from PointTag import PointTag
@@ -20,7 +20,9 @@ from TrackLength import TrackLength
 from TrackDifficulty import TrackDifficulty
 from TrackShape import TrackShape
 
-areas_paths = {'baiersbronn': 'ExampleData\\ExampleDB.json'}  # Other areas in the future :)
+areas_paths = {'baiersbronn':  # Other areas in the future :)
+                   os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                                'areas_databases\\baiersbronn\\baiersbronn_db.json'))}
 USER_ID = 'user'
 SIMILARITY_THRESH = 0.6
 
