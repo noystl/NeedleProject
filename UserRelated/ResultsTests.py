@@ -4,6 +4,7 @@ Supplies visual and textual representation of the results for our use :)
 
 import matplotlib.pyplot as plt
 import mplleaflet
+import os
 import pandas as pd
 
 
@@ -71,8 +72,9 @@ def plot_results(args, result: list):
     fig, ax = plt.subplots()
     draw_user_limits(args, ax)
     for track_id in result:
-        df = pd.read_csv('ExampleData\\tracks_gps_points\\' + str(track_id))
+        df = pd.read_csv(os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
+                                                      'areas_databases\\baiersbronn\\tracks_gps_points\\') + str(
+            track_id)))
         df = df.dropna()
         ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
     mplleaflet.show()
-
