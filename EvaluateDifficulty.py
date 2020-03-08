@@ -39,10 +39,10 @@ class DifficultyEvaluator:
         :param slopes: python set of all slopes appearing in the track
         :return: a set of all slopes rounded to nearest 10
         """
-        res = set()
+        result = set()
         for slope in slopes:
-            res.add((slope // 10) * 10)
-        return res
+            result.add((slope // 10) * 10)
+        return result
 
     def _get_hp_slopes(self, length):
         """
