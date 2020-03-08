@@ -4,10 +4,11 @@ import numpy as np
 import matplotlib.pyplot as plt
 from geopy.distance import distance
 import OsmDataCollector as odc
+import locale
 
 areas_paths = {'baiersbronn': ['N48E008', [48, 8]]}  # Other areas in the future :)
 
-MAX_TRACK_LEN = 1001  # maximum supported track length
+MAX_TRACK_LEN = 10001  # maximum supported track length
 LEN_SPACING = 5  # size of the "buckets" of the length_tag
 TICK = 0.25  # in kms
 DEG_GENERALIZE = 15  # size of "buckets for slopes, in degrees
@@ -29,11 +30,15 @@ def get_tick(track_len):
     :param track_len: a track's length (km)
     :return: double (km)
     """
-    ranges = np.arange(0, MAX_TRACK_LEN, LEN_SPACING)
-    for i in range(len(ranges) - 1):
-        if ranges[i] < track_len <= ranges[i+1]:
-            return (TICK * 100) * (i + 1) / 100
-
+    #ranges = np.arange(0, MAX_TRACK_LEN, LEN_SPACING)
+    i = track_len // LEN_SPACING + 1
+    if track_len % LEN_SPACING == 0:
+        i -= 1
+    return TICK * i
+    # the below implementation is wasteful (and makes the ticks slightly larger than necessary)
+    # for i in range(len(ranges) - 1):
+    #    if ranges[i] >= track_len:
+    #        return (TICK * 100) * (i + 1) / 100
 
 def get_length_tag(track_len):
     """
@@ -84,7 +89,7 @@ def compute_track_elevation(elev_map, tile_rep, points):
     """
     computes the elevation values along the track, represented by it's points.
     :param elev_map: 2d array of elevation in a grid (2d np array of ints)
-    :param tile_rep:
+    :param tile_rep: list of shape (2,) of top left coordiantes of elev map
     :param points: 2-dim np array of the track's points: (lat, lon).
     :return: the elevation values along the track.
    """
@@ -170,11 +175,8 @@ def compute_slope(track_points, track_elevs, track_length):  # TODO: notify abou
     # plot_dist_elevation(kmMarks, elevMarks)
 
     # get slopes of all sections:
-    slopes = (elevMarks[2:] - elevMarks[:-2]) / tick  # slope of a straight line
+    slopes = (elevMarks[1:] - elevMarks[:-1]) / tick  # slope of a straight line
     slopes = [math.degrees(rad) for rad in np.arctan(slopes)]  # the slope in degrees
-
-    # slopes associated to <DEG_GENERALIZE> degrees subsections:
-    slopes = [((math.floor(x) - (math.floor(x) % DEG_GENERALIZE))/DEG_GENERALIZE) for x in slopes]
 
     return slopes
 

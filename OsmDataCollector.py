@@ -11,7 +11,7 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 5  # This is the number of gpx files we download from osm.
+NUMBER_OF_WANTED_FILES = 1  # This is the number of gpx files we download from osm.
 SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
