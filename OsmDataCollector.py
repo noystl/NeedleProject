@@ -2,6 +2,7 @@ import os
 from OsmTrack import OsmTrack
 from PointTag import PointTag
 from TrackShape import TrackShape
+import slopeMap
 import gpxpy.gpx
 import wget
 import shutil
@@ -78,7 +79,8 @@ class OsmDataCollector:
                             continue
                         curr_track = OsmTrack(seg, self.id)
                         self.id += 1
-                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50:
+                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50 or \
+                                curr_track.length <= slopeMap.TICK:
                             continue
                         self.tracks.append(curr_track)
             except gpxpy.gpx.GPXXMLSyntaxException:
