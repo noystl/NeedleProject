@@ -2,6 +2,7 @@ import os
 from OsmTrack import OsmTrack
 from PointTag import PointTag
 from TrackShape import TrackShape
+import slopeMap
 import gpxpy.gpx
 import wget
 import shutil
@@ -11,7 +12,7 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 5  # This is the number of gpx files we download from osm.
+NUMBER_OF_WANTED_FILES = 1  # This is the number of gpx files we download from osm.
 SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
@@ -78,7 +79,8 @@ class OsmDataCollector:
                             continue
                         curr_track = OsmTrack(seg, self.id)
                         self.id += 1
-                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50:
+                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50 or \
+                                curr_track.length <= slopeMap.TICK:
                             continue
                         self.tracks.append(curr_track)
             except gpxpy.gpx.GPXXMLSyntaxException:
