@@ -135,8 +135,9 @@ class DifficultyEvaluator:
         res = {}
         res_json = {}
         for key in slopes.keys():
-            res[key] = [self.shingle_slopes(slopes[key][0], self._shingle_length), slopes[key][1]]
-            res_json[key] = [list(self.shingle_slopes(slopes[key][0], self._shingle_length)), slopes[key][1]]
+            shingled = self.shingle_slopes(slopes[key][0], self._shingle_length)
+            res[key] = [shingled, slopes[key][1]]
+            res_json[key] = [list(shingled), slopes[key][1]]
 
         # saves the data both for run and locally for future runs
         self._shingle_db[db_key] = res
