@@ -37,8 +37,8 @@ class HpCrawler:
                             crawled from that country and a json file keeping trace of the data collecting progress
                             * The dir is named by the country name, string: <country>
                             * The gpx files are named by the track's idx, int >= 0: <j>
-                            * The json file is named <progress>: maps [track_gpx_filename, track_length,
-                                track_difficulty] to track idx <j>, int >=0.
+                            * The json file is named <progress>: maps [track_gpx_filename,track_difficulty]
+                                to track idx <j>, int >=0.
      (2) dir <tracks_dir_path> : contains json files. These files are named by the length_tag of the tracks
                                 they hold: int >= 0 denoted as <l>.
                                 each json files holds a dict mapping the track name: <country><j>
@@ -198,21 +198,19 @@ class HpCrawler:
 
     def _get_page_data(self):
         """
-        gets data from a trail page in the hiking project: track's length and track's difficulty.
-        :returns track_len: strings that holds a double
-                track_dif: string representation of enum of class TrackDifficulty
+        gets data from a trail page in the hiking project: track's difficulty.
+        :returns track_dif: string representation of enum of class TrackDifficulty
         """
         e = self._driver.find_elements_by_xpath("//div[@class='stat-block mx-1 pb-2']")[0]
         txt = e.text
         txt = txt.split()
-        track_len = txt[1]
         track_dif = txt[-1]
-        return track_len, track_dif
+        return track_dif
 
     def _collect_track_data(self):
         """
-        collects and saves the track's data: difficulty, length, the gpx file, and it's filename.
-        :return: the track's features: [filename, track_len, track_dif]
+        collects and saves the track's data: difficulty, the gpx file, and it's filename.
+        :return: the track's features: [filename, track_dif]
         """
 
         # print("\t* collecting track") #TODO
@@ -224,8 +222,8 @@ class HpCrawler:
         j_gpx_path = os.path.join(self._path, self._track_idx)
         self._driver.get(self._url)
 
-        # get track's length and difficulty from site:
-        track_len, track_dif = self._get_page_data()
+        # get track's difficulty from site:
+        track_dif = self._get_page_data()
 
         # download gpx file (if needed) and get the download's name:
         if not os.path.exists(j_gpx_path + ".gpx"):  # if gpx file hasn't been downloaded before
@@ -236,7 +234,7 @@ class HpCrawler:
             filename = change.pop()
             dup_file = re.findall(r'.*\(\d+\)\.gpx', filename)
 
-            # handles the case we'vw just saved dup file, due to connection problems at last connection:
+            # handles the case we've just saved dup file, due to connection problems at last connection:
             # NOTE: does NOT handle the case of multiple dup files saved due to reoccurring connection problems
             # at the exact same spot (although it's not likely to happen).
             # it deletes only the file we've saved in this current connection.
@@ -252,25 +250,26 @@ class HpCrawler:
         # NOTE:
         # (1) we want to save filename for future use: when re-mining a country that
         # was mined before, we'll be able to see which tracks we've processed before.
-        # (2) we rather save the gpx files by their <j> because it's uniqe and it allows
+        # (2) we rather save the gpx files by their <j> because it's unique and it allows
         # us to keep mining from where we've stopped (ints are ordered).
-        progress.update({self._track_idx: [filename, track_len, track_dif]})
+        progress.update({self._track_idx: [filename, track_dif]})
         self._save_dict(progress, os.path.join(self._path, "progress.json"))
 
-        return [filename, track_len, track_dif]
+        return [filename, track_dif]
 
 # processes data #
     def _process_track_data(self, features):
         """
         process the track's data that was collected.
-        :param features:  the track's features: [filename, track_len, track_dif]
+        :param features:  the track's features: [filename, track_dif]
         :return: the track's len_tag: see SlopeMap
                 the track's representation:  dict {<country>_<j>: [slopes, track_dif]}
+                if the track is to short for processing- returns None
         """
         # print("\t* processing track") #TODO
+
         points, track_elev = pd.DataFrame({}), pd.DataFrame({})
-        filename, track_len, track_dif = features
-        track_len = float(track_len)
+        filename, track_dif = features
 
         # open gpx file:
         gpx_file = open(os.path.join(HpCrawler.gpx_dir_path, self._country, self._track_idx + ".gpx"),
@@ -285,11 +284,16 @@ class HpCrawler:
                 track_elev = pd.DataFrame([{'ele': p.elevation} for p in seg.points]) \
                     .to_numpy().reshape(len(points))
 
+        track_len = sm.compute_track_km(points)[-1]
+        if track_len < sm.TICK:  # discards too short of a track
+            # TODO: Matan you should check if the condition is good for you! maybe it should be tick/2
+            return None
+
+        # computes the track's len_tag for future use:
+        len_tag = sm.get_length_tag(track_len)
+
         # compute slopes:
         slopes = sm.compute_slope(points, track_elev, track_len)
-
-        # save track to the correct dict (according to the track's length):
-        len_tag = sm.get_length_tag(track_len)
 
         return len_tag, {self._country + '_' + self._track_idx: [slopes, track_dif]}
 
@@ -339,17 +343,18 @@ class HpCrawler:
                 self._url = trail_urls[j]
                 features = self._collect_track_data()
 
-                # discards short trails (but collect it's data for optional future use):
-                if float(features[1]) >= sm.TICK:
-                    try:
-                        self._track_idx = str(j)
-                        len_tag, trail_dict = self._process_track_data(features)
-                    except gpxpy.gpx.GPXXMLSyntaxException as e:
-                        print(str(e))
-                        continue
-                    HpCrawler._save_track_data(len_tag, trail_dict)
+                try:
+                    self._track_idx = str(j)
+                    track_data = self._process_track_data(features)
+                except gpxpy.gpx.GPXXMLSyntaxException as e:
+                    print(str(e))
+                    continue
 
-                    # print("\t\tSAVED") #TODO
+                # discards short trails (but collect it's data for optional future use):
+                if track_data is not None:  # the track is long enough
+                    HpCrawler._save_track_data(track_data[0], track_data[1])
+
+                    # print("\t\tSAVED")  # TODO
 
                 # update seen after every track processing is completed:
                 seen.update({self._country: [str(int(self._track_idx) + 1), trail_urls]})

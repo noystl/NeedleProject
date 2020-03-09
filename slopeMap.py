@@ -6,7 +6,7 @@ from geopy.distance import distance
 import OsmDataCollector as odc
 import locale
 
-areas_paths = {'baiersbronn': ['N48E008', [48, 8]]}  # Other areas in the future :)
+areas_paths = {'baiersbronn': ['N48E008.hgt', [48, 8]]}  # Other areas in the future :)
 
 MAX_TRACK_LEN = 10001  # maximum supported track length - this parameter is obsolete
 LEN_SPACING = 5  # size of the "buckets" of the length_tag
@@ -31,10 +31,8 @@ def get_tick(track_len):
     :return: double (km)
     """
     #ranges = np.arange(0, MAX_TRACK_LEN, LEN_SPACING)
-    i = track_len // LEN_SPACING + 1
-    if track_len % LEN_SPACING == 0:
-        i -= 1
-    return TICK * i
+    len_tag = get_length_tag(track_len)
+    return TICK * (len_tag + 1)
     # the below implementation is wasteful (and makes the ticks slightly larger than necessary)
     # for i in range(len(ranges) - 1):
     #    if ranges[i] >= track_len:
@@ -43,7 +41,7 @@ def get_tick(track_len):
 def get_length_tag(track_len):
     """
     :param track_len: int representing track's length in km
-    :return: an int representing the length tag of the given  track's length
+    :return: a natural number representing the length tag of the given  track's length
     """
     if track_len % LEN_SPACING == 0:
         return int(track_len // LEN_SPACING - 1)
@@ -102,7 +100,7 @@ def compute_track_elevation(elev_map, tile_rep, points):
     return np.asarray(elevations)
 
 
-def compute_track_km(points):  # TODO: compare with Noy's implementation of getting the track's length
+def compute_track_km(points):
     """
     computes the km values along the track, represented by it's points.
     distance over path in computed by: https://janakiev.com/blog/gps-points-distance-python/
@@ -133,7 +131,7 @@ def plot_dist_elevation(kms, elevations):
     plt.ylabel('Elevation (meters)')
 
     # # change y axis range to capture representation of elevation:
-    plt.axis([0, np.amax(kms), 0, np.amax(elevations) + 10])
+    plt.axis([0, np.amax(kms), min(0, np.amin(elevations) - 10), np.amax(elevations) + 10])
     # # change y axis mark points to represent kms:
     start, end = ax.get_xlim()
     ax.xaxis.set_ticks(np.arange(start, end, 1))
@@ -146,36 +144,34 @@ def compute_slope(track_points, track_elevs, track_length):  # TODO: notify abou
     """
     returns a python list of
     :param track_points: 2-dim np array of the track's points: (lat, lon).
+    :param: track_length: float
     :param track_elevs: np array of length n, holding the elevations at points.
-    :param track_length: float
     :return: python list of floats representing the angles (values are in [-90, 90],
             all <DEG_GENERALIZE> degrees subsections are mapped to one value representing
             the slope of that subsection)
     """
+    track_kms = compute_track_km(track_points)
     tick = get_tick(track_length)
-    trackKms = compute_track_km(track_points)
-    kmMarks = np.arange(0, trackKms[-1] + 1, tick / 2)
 
-    # handles the last segment of track (to add it to kmMarks or not):
-    # there are two options: # TODO - Matan choose from the options the one you meant
+    # gets the last multiple of tick / 2 that was seen in track, and discards the leftover track:
+    km_marks = np.arange(0, track_kms[-1], tick / 2)
+    if track_kms[-1] % tick / 2 == 0:
+        np.append(km_marks, track_kms[-1])
 
-    # (1) gets the last multiple of tick / 2 that was seen in track, and discards the leftover track.
-    # DO NOTHING
-
-    # (2) add the last km value of the original track
+    # alternatively: add the last km value of the original track
     # (NOTE: the last kmMark will probably not be a multiple of tick / 2)
     #  ADD THIS CODE:
-    if trackKms[-1] > kmMarks[-1]:
-      np.append(kmMarks, trackKms[-1])
+    #   if trackKms[-1] > kmMarks[-1]:
+    #   np.append(kmMarks, trackKms[-1])
 
     # interpolate the elevation values at kmMarks:
-    elevMarks = np.interp(kmMarks, trackKms, track_elevs)
+    elev_marks = np.interp(km_marks, track_kms, track_elevs)
 
     # TODO: FOR VISUALIZING-
-    plot_dist_elevation(kmMarks, elevMarks)
+    plot_dist_elevation(km_marks, elev_marks)
 
     # get slopes of all sections:
-    slopes = (elevMarks[1:] - elevMarks[:-1]) / tick  # slope of a straight line
+    slopes = (elev_marks[1:] - elev_marks[:-1]) / tick  # slope between all 2 following tick/2 points
     slopes = [math.degrees(rad) for rad in np.arctan(slopes)]  # the slope in degrees
 
     return slopes
@@ -186,7 +182,6 @@ def slopes_sanity_check():
     elevs = np.array([0, 1, 2, 0, 0, 0])
     slopes = (elevs[2:] - elevs[:-2]) / 2
     slopes = [math.degrees(rad) for rad in np.arctan(slopes)]
-    print(slopes)
 
     fig, ax = plt.subplots()
     ax.plot(kms, elevs)
@@ -195,6 +190,7 @@ def slopes_sanity_check():
     plt.xlabel('Distance (km)')
     plt.ylabel('Elevation (meters)')
     plt.show()
+    return slopes
 
 
 if __name__ == "__main__":
@@ -202,7 +198,7 @@ if __name__ == "__main__":
     elev_map_path, tile_rep = areas_paths['baiersbronn']
     BAIERSBRONN_COORS = [8.1584, 48.4688, 8.4797, 48.6291]
 
-    data_collector = odc.OsmDataCollector(BAIERSBRONN_COORS)
+    data_collector = odc.OsmDataCollector(BAIERSBRONN_COORS)  # TODO Noy add param to set the number of files we want to extract
     track = data_collector.tracks[0]
     points = track.extract_gps_points()
     points = points.to_numpy()[:, :2]
@@ -210,10 +206,11 @@ if __name__ == "__main__":
 
     # # compute slopes, plot the change in elevation(in meters) over distance (in km). marking kmMark points
     # # according to the spacing:
-    slopes = compute_slope(points, elevs, track.length())  # TODO add getter in OSM
+    slopes = compute_slope(points, elevs, track.length)  # TODO Noy add length getter in OSM
     print(slopes)
 
     # Slopes sanity check:
-    slopes_sanity_check()
+    # slopes slopes_sanity_check()
+    # print(slopes)
 
 
