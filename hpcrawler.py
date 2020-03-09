@@ -257,13 +257,14 @@ class HpCrawler:
 
         return [filename, track_dif]
 
+
 # processes data #
     def _process_track_data(self, features):
         """
         process the track's data that was collected.
         :param features:  the track's features: [filename, track_dif]
         :return: the track's len_tag: see SlopeMap
-                the track's representation:  dict {<country>_<j>: [slopes, track_dif]}
+                the track's representation:  dict {<country>_<j>: [points, elevation, length, track_dif]}
                 if the track is to short for processing- returns None
         """
         # print("\t* processing track") #TODO
@@ -291,6 +292,10 @@ class HpCrawler:
         # computes the track's len_tag for future use:
         len_tag = sm.get_length_tag(track_len)
 
+        return len_tag, \
+               {self._country + '_' + self._track_idx: [points.tolist(), track_elev.tolist(), track_len, track_dif]}
+
+        # everything following is related to the old return
         # compute slopes:
         slopes = sm.compute_slope(points, track_elev, track_len)
 

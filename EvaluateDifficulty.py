@@ -14,7 +14,8 @@ import json
 
 class DifficultyEvaluator:
     gpx_dir_path = 'hp\\gpx'
-    slopes_dir_path = 'hp\\tracks'
+    pts_dir_path = 'hp\\tracks'
+    shingles_dir_path = 'hp\\shingles'
     seen_path = 'hp\\seen.json'
 
     def __init__(self, area_fname, area_topleft, shingle_length):
@@ -78,18 +79,28 @@ class DifficultyEvaluator:
             result.append(int((slope // 10) + 9))
         return result
 
+
+    @staticmethod
+    def _calc_hp_slopes(dictionary: dict):
+
+        res = {}
+        for key in dictionary.keys():
+            slope = sm.compute_slope(dictionary[key][0], dictionary[key][1], dictionary[key][2])
+            res[key] = [slope, dictionary[key][-1]]
+        return res
+
     @staticmethod
     def get_hp_slopes(length):
         """
         collects tracks from hp dataset which match the length of a given path
         """
-        path = os.path.join(DifficultyEvaluator.slopes_dir_path, str(sm.get_length_tag(length)) + '.json')
+        path = os.path.join(DifficultyEvaluator.pts_dir_path, str(sm.get_length_tag(length)) + '.json')
         dictionary = {}
         if os.path.exists(path):
             with open(path, "r") as f:
                 file = f.read()
             dictionary = json.loads(file)
-        return dictionary
+        return DifficultyEvaluator._calc_hp_slopes(dictionary)
 
     def get_hp_shingled_tracks(self, path_length):
         """
@@ -98,14 +109,39 @@ class DifficultyEvaluator:
         """
         # currently assume data saved is slopes of same tick as osms one
         # in the future create function that reads gps coords into correctly ticked data
-        db_key = str(sm.get_length_tag(path_length)) + str(self._shingle_length)
+        db_key = str(sm.get_length_tag(path_length)) + "shingle_len" + str(self._shingle_length)
+
+        # checks if data was already gathered during this run
         if db_key in self._shingle_db.keys():
             return self._shingle_db[db_key]
+
+        # checks if data was already gathered during some other run
+        path = os.path.join(DifficultyEvaluator.shingles_dir_path, db_key + '.json')
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                file = f.read()
+            data_jason = json.loads(file)
+            tmp = {}
+            for key in data_jason.keys():
+                tmp[key] = [set(data_jason[key][0]), data_jason[key][1]]
+            self._shingle_db[db_key] = tmp
+            return self._shingle_db[db_key]
+
+        # calculates the shingles according to parameters
         slopes = self.get_hp_slopes(path_length)
         res = {}
+        res_json = {}
         for key in slopes.keys():
             res[key] = [self.shingle_slopes(slopes[key][0], self._shingle_length), slopes[key][1]]
+            res_json[key] = [list(self.shingle_slopes(slopes[key][0], self._shingle_length)), slopes[key][1]]
+
+        # saves the data both for run and locally for future runs
         self._shingle_db[db_key] = res
+        if not os.path.exists(DifficultyEvaluator.shingles_dir_path):
+            os.makedirs(DifficultyEvaluator.shingles_dir_path)
+        with open(path, 'w') as f:
+            json.dump(res_json, f)
+
         return res
 
     @staticmethod
