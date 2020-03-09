@@ -10,7 +10,7 @@ areas_paths = {'baiersbronn': ['N48E008.hgt', [48, 8]]}  # Other areas in the fu
 
 MAX_TRACK_LEN = 10001  # maximum supported track length - this parameter is obsolete
 LEN_SPACING = 5  # size of the "buckets" of the length_tag
-TICK = 0.25  # in kms
+TICK = 0.125  # in kms
 DEG_GENERALIZE = 15  # size of "buckets for slopes, in degrees
 
 
@@ -24,9 +24,6 @@ def get_num_of_len_tags():  # this function is obsolete
 def get_tick(track_len):
     """
     returns the tick according to the track's length supplied.
-    the tag is computed from the formula:
-    for int i in [0,
-    return [LEN_SPACING * i, LEN_SPACING * (i + 1)] =  TICK * (i + 1) / 100
     :param track_len: a track's length (km)
     :return: double (km)
     """
@@ -41,7 +38,7 @@ def get_tick(track_len):
 def get_length_tag(track_len):
     """
     :param track_len: int representing track's length in km
-    :return: a natural number representing the length tag of the given  track's length
+    :return: int >=0 representing the length tag of the given  track's length
     """
     if track_len % LEN_SPACING == 0:
         return int(track_len // LEN_SPACING - 1)
@@ -153,13 +150,13 @@ def compute_slope(track_points, track_elevs, track_length):  # TODO: notify abou
     track_kms = compute_track_km(track_points)
     tick = get_tick(track_length)
 
-    # gets the last multiple of tick / 2 that was seen in track, and discards the leftover track:
-    km_marks = np.arange(0, track_kms[-1], tick / 2)
-    if track_kms[-1] % tick / 2 == 0:
+    # gets the last multiple of tick  that was seen in track, and discards the leftover track:
+    km_marks = np.arange(0, track_kms[-1], tick)
+    if track_kms[-1] % tick == 0:
         np.append(km_marks, track_kms[-1])
 
     # alternatively: add the last km value of the original track
-    # (NOTE: the last kmMark will probably not be a multiple of tick / 2)
+    # (NOTE: the last kmMark will probably not be a multiple of tick)
     #  ADD THIS CODE:
     #   if trackKms[-1] > kmMarks[-1]:
     #   np.append(kmMarks, trackKms[-1])
@@ -171,7 +168,7 @@ def compute_slope(track_points, track_elevs, track_length):  # TODO: notify abou
     plot_dist_elevation(km_marks, elev_marks)
 
     # get slopes of all sections:
-    slopes = (elev_marks[1:] - elev_marks[:-1]) / tick  # slope between all 2 following tick/2 points
+    slopes = (elev_marks[1:] - elev_marks[:-1]) / tick  # slope between all 2 following tick points
     slopes = [math.degrees(rad) for rad in np.arctan(slopes)]  # the slope in degrees
 
     return slopes
