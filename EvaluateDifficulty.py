@@ -28,7 +28,7 @@ class DifficultyEvaluator:
         self._shingle_length = shingle_length
         self._shingle_db = {}  # we're going to query shingles a lot in a run and we want to compute shingles once
 
-    def get_shingles(self, points: pd.DataFrame, factor: float) -> set:
+    def get_shingles(self, points: pd.DataFrame) -> set:
         """
         Converts the given track into a set of shingles.
         :param points: a pandas df containing the lat lon of the points consisting a gps track.
@@ -39,8 +39,7 @@ class DifficultyEvaluator:
         pts = points.to_numpy()
         elev = sm.compute_track_elevation(self._area_fname, self._area_topleft, pts)
         path_length = sm.compute_track_km(pts)[-1]
-        tick = sm.get_tick(path_length)
-        slopes = sm.compute_slope(pts, elev, factor * tick)
+        slopes = sm.compute_slope(pts, elev, path_length)
         return self.shingle_slopes(slopes, self._shingle_length)
 
     @staticmethod
@@ -53,6 +52,7 @@ class DifficultyEvaluator:
         (values of shingles are integers with up to 2 * <shingle_length> digits)
         """
         singles = DifficultyEvaluator.adjust_slopes(slopes)
+        # print('shingles_list ' + str(singles))
         if shingle_length == 1:
             return set(singles)
         res = []
@@ -121,12 +121,17 @@ class DifficultyEvaluator:
         return minhash
 
     def get_similar_tracks(self, osm_track: OsmTrack) -> list:
-        osm_shingles = self.get_shingles(osm_track.gps_points.iloc[:, :-1], 0.25)
-        print('osm_shin' + str(osm_shingles))
-        hp_dict = self.get_hp_shingled_tracks(osm_track.length)
-        print('hp_dict: ' + str(hp_dict))
-        lsh = MinHashLSH(threshold=0.6, num_perm=128)
+        """
+        Gets a list of hp-track ids that are considered similar enough to the given osm-track.
+        :param osm_track: an osm-track.
+        :return: the list of ids described above.
+        """
+        osm_shingles = self.get_shingles(osm_track.gps_points.iloc[:, :-1])
+        pts = osm_track.gps_points.iloc[:, :-1]
+        length = sm.compute_track_km(pts.to_numpy())[-1]
+        hp_dict = self.get_hp_shingled_tracks(length)
 
+        lsh = MinHashLSH(threshold=0.67, num_perm=128)
         osm_minhash = self.get_minhash(osm_shingles)
 
         for hp_track_key in hp_dict:
@@ -135,17 +140,27 @@ class DifficultyEvaluator:
         return lsh.query(osm_minhash)
 
     def add_difficulty(self, osm_track: OsmTrack):
+        """
+        Discovers the difficulty of the given osm-track and adds it to the object's inner data.
+        :param osm_track: an osm-track.
+        """
         similar_hp_tracks = self.get_similar_tracks(osm_track)
-        print('similar_tracks' + str(similar_hp_tracks))
+
+        # For tests
+        # print('similar_tracks' + str(similar_hp_tracks))
+
         if similar_hp_tracks:
-            db_key = str(sm.get_length_tag(osm_track.length)) + str(self._shingle_length)
+            pts = osm_track.gps_points.iloc[:, :-1]
+            db_key = str(sm.get_length_tag(sm.compute_track_km(pts.to_numpy())[-1])) + str(self._shingle_length)
             diff = self._shingle_db[db_key][similar_hp_tracks[0]][1]
+
             if diff == 'Easy':
                 osm_track.difficulty = TrackDifficulty.EASY
             elif diff == 'Intermediate':
                 osm_track.difficulty = TrackDifficulty.INTERMEDIATE
             else:
                 osm_track.difficulty = TrackDifficulty.DIFFICULT
+
         # todo: handle the case where we have several matches.
         # todo: handle the case where we don't get any match.
         # todo: fix the issue with the enum (the if-else above)
