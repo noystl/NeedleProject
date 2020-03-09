@@ -133,10 +133,10 @@ def plot_dist_elevation(kms, elevations):
     plt.ylabel('Elevation (meters)')
 
     # # change y axis range to capture representation of elevation:
-    # plt.axis([0, np.amax(kms), 0, np.amax(elevations) + 10])
+    plt.axis([0, np.amax(kms), 0, np.amax(elevations) + 10])
     # # change y axis mark points to represent kms:
-    # start, end = ax.get_xlim()
-    # ax.xaxis.set_ticks(np.arange(start, end, 1))
+    start, end = ax.get_xlim()
+    ax.xaxis.set_ticks(np.arange(start, end, 1))
 
     plt.show()
 
@@ -165,14 +165,14 @@ def compute_slope(track_points, track_elevs, track_length):  # TODO: notify abou
     # (2) add the last km value of the original track
     # (NOTE: the last kmMark will probably not be a multiple of tick / 2)
     #  ADD THIS CODE:
-    #  if trackKms[-1] > kmMarks[-1]:
-    #   np.append(kmMarks, trackKms[-1])
+    if trackKms[-1] > kmMarks[-1]:
+      np.append(kmMarks, trackKms[-1])
 
     # interpolate the elevation values at kmMarks:
     elevMarks = np.interp(kmMarks, trackKms, track_elevs)
 
     # TODO: FOR VISUALIZING-
-    # plot_dist_elevation(kmMarks, elevMarks)
+    plot_dist_elevation(kmMarks, elevMarks)
 
     # get slopes of all sections:
     slopes = (elevMarks[1:] - elevMarks[:-1]) / tick  # slope of a straight line

@@ -1,11 +1,15 @@
 from datasketch import MinHash, MinHashLSH
-from slopes_poc import data_generator as genDat
+# from slopes_poc import data_generator as genDat
 import slopeMap as sm
 import numpy as np
 import pandas as pd
+from TrackDifficulty import TrackDifficulty
+import OsmTrack
 import os
 import json
-from slopes_poc import poc, data_generator
+
+
+# from slopes_poc import poc, data_generator
 
 
 class DifficultyEvaluator:
@@ -13,14 +17,12 @@ class DifficultyEvaluator:
     slopes_dir_path = 'hp\\tracks'
     seen_path = 'hp\\seen.json'
 
-    def __init__(self, datapath, area_fname, area_topleft, shingle_length):
+    def __init__(self, area_fname, area_topleft, shingle_length):
         """
         ctor
-        :param datapath: ~~~
         :param area_fname: path to hgt file relevant to tested area
         :param area_topleft: list of length 2 with top left coordiantes of area file (at area_fname)
         """
-        self._path = datapath
         self._area_fname = area_fname
         self._area_topleft = area_topleft
         self._shingle_length = shingle_length
@@ -81,7 +83,7 @@ class DifficultyEvaluator:
         """
         collects tracks from hp dataset which match the length of a given path
         """
-        path = os.path.join(DifficultyEvaluator.slopes_dir_path, str(sm.get_length_tag(length)))
+        path = os.path.join(DifficultyEvaluator.slopes_dir_path, str(sm.get_length_tag(length)) + '.json')
         dictionary = {}
         if os.path.exists(path):
             with open(path, "r") as f:
@@ -105,3 +107,45 @@ class DifficultyEvaluator:
             res[key] = [self.shingle_slopes(slopes[key][0], self._shingle_length), slopes[key][1]]
         self._shingle_db[db_key] = res
         return res
+
+    @staticmethod
+    def get_minhash(shingles: set) -> MinHash:
+        """
+        given a set of shingles, creates a MinHash object updated with those shingles.
+        :param shingles: a set of shingles
+        :return: a MinHash object updated with the given shingles.
+        """
+        minhash = MinHash(num_perm=128)
+        for shin in shingles:
+            minhash.update(str(shin).encode('utf-8'))
+        return minhash
+
+    def get_similar_tracks(self, osm_track: OsmTrack) -> list:
+        osm_shingles = self.get_shingles(osm_track.gps_points.iloc[:, :-1], 0.25)
+        print('osm_shin' + str(osm_shingles))
+        hp_dict = self.get_hp_shingled_tracks(osm_track.length)
+        print('hp_dict: ' + str(hp_dict))
+        lsh = MinHashLSH(threshold=0.6, num_perm=128)
+
+        osm_minhash = self.get_minhash(osm_shingles)
+
+        for hp_track_key in hp_dict:
+            hp_minhash = self.get_minhash(hp_dict[hp_track_key][0])
+            lsh.insert(hp_track_key, hp_minhash)
+        return lsh.query(osm_minhash)
+
+    def add_difficulty(self, osm_track: OsmTrack):
+        similar_hp_tracks = self.get_similar_tracks(osm_track)
+        print('similar_tracks' + str(similar_hp_tracks))
+        if similar_hp_tracks:
+            db_key = str(sm.get_length_tag(osm_track.length)) + str(self._shingle_length)
+            diff = self._shingle_db[db_key][similar_hp_tracks[0]][1]
+            if diff == 'Easy':
+                osm_track.difficulty = TrackDifficulty.EASY
+            elif diff == 'Intermediate':
+                osm_track.difficulty = TrackDifficulty.INTERMEDIATE
+            else:
+                osm_track.difficulty = TrackDifficulty.DIFFICULT
+        # todo: handle the case where we have several matches.
+        # todo: handle the case where we don't get any match.
+        # todo: fix the issue with the enum (the if-else above)

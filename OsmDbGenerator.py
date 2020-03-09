@@ -5,6 +5,7 @@ supported geographic search areas.
 
 from OsmDataCollector import OsmDataCollector
 import json
+from EvaluateDifficulty import DifficultyEvaluator
 import os
 import shutil
 import hpcrawler
@@ -24,7 +25,7 @@ class OsmDbGenerator:
                                 }
 
         # We crawl tracks in the following countries out of https://www.hikingproject.com/ :
-        self.countries_to_crawl = ['Philippines']
+        self.countries_to_crawl = ['Philippines', 'Germany']
         self._create_hp_db()
 
     @staticmethod
@@ -56,6 +57,7 @@ class OsmDbGenerator:
         self._create_dir(AREAS_DIR_PATH)
 
         for area_name in self.supported_areas:
+            diff_evaluator = DifficultyEvaluator('supported_areas_tiles\\N48E008.hgt', [48, 8], 2)
             area_dir_name = AREAS_DIR_PATH + area_name
             area_coor_dir_name = area_dir_name + COORS_DIR_PATH
 
@@ -65,6 +67,7 @@ class OsmDbGenerator:
             area_osm_data = OsmDataCollector(self.supported_areas[area_name])
             tracks_dict = {'tracks': {}}
             for track in area_osm_data.tracks:
+                diff_evaluator.add_difficulty(track)
                 tracks_dict['tracks'][track.id] = track.get_dict_repr()
                 track.gps_points.to_csv(area_coor_dir_name + str(track.id))
             with open(area_dir_name + '\\' + area_name + "_db.json", "w") as write_file:
