@@ -82,7 +82,10 @@ class DifficultyEvaluator:
 
     @staticmethod
     def _calc_hp_slopes(dictionary: dict):
-
+        """
+        reformats dictionary into the form {key: [slopes, difficulty]}
+        where slopes is a list of floats and difficulty is a string
+        """
         res = {}
         for key in dictionary.keys():
             slope = sm.compute_slope(dictionary[key][0], dictionary[key][1], dictionary[key][2])
