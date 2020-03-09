@@ -286,7 +286,6 @@ class HpCrawler:
 
         track_len = sm.compute_track_km(points)[-1]
         if track_len < sm.TICK:  # discards too short of a track
-            # TODO: Matan you should check if the condition is good for you! maybe it should be tick/2
             return None
 
         # computes the track's len_tag for future use:
