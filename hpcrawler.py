@@ -101,7 +101,7 @@ class HpCrawler:
         :param path: a json file path
         """
         with open(path, 'w') as f:
-            json.dump(dictionary, f)
+            json.dump(dictionary, f, indent=4)
 
     @staticmethod
     def load_seen():

@@ -1,15 +1,10 @@
 from datasketch import MinHash, MinHashLSH
-# from slopes_poc import data_generator as genDat
 import slopeMap as sm
-import numpy as np
 import pandas as pd
 from TrackDifficulty import TrackDifficulty
 import OsmTrack
 import os
 import json
-
-
-# from slopes_poc import poc, data_generator
 
 
 class DifficultyEvaluator:
@@ -33,8 +28,6 @@ class DifficultyEvaluator:
         """
         Converts the given track into a set of shingles.
         :param points: a pandas df containing the lat lon of the points consisting a gps track.
-        :param factor: factor of segment size of shingle
-        :param shingle_length: number of path segments per shingle
         :return: a set of the slope-shingles appearing in the track.
         """
         pts = points.to_numpy()
@@ -78,7 +71,6 @@ class DifficultyEvaluator:
         for slope in slopes:
             result.append(int((slope // 10) + 9))
         return result
-
 
     @staticmethod
     def _calc_hp_slopes(dictionary: dict):
@@ -144,7 +136,7 @@ class DifficultyEvaluator:
         if not os.path.exists(DifficultyEvaluator.shingles_dir_path):
             os.makedirs(DifficultyEvaluator.shingles_dir_path)
         with open(path, 'w') as f:
-            json.dump(res_json, f)
+            json.dump(res_json, f, indent=4)
 
         return res
 
@@ -187,11 +179,12 @@ class DifficultyEvaluator:
         similar_hp_tracks = self.get_similar_tracks(osm_track)
 
         # For tests
-        # print('similar_tracks' + str(similar_hp_tracks))
+        print('similar_tracks' + str(similar_hp_tracks))
 
         if similar_hp_tracks:
             pts = osm_track.gps_points.iloc[:, :-1]
-            db_key = str(sm.get_length_tag(sm.compute_track_km(pts.to_numpy())[-1])) + str(self._shingle_length)
+            length = sm.compute_track_km(pts.to_numpy())[-1]
+            db_key = str(sm.get_length_tag(length)) + "shingle_len" + str(self._shingle_length)
             diff = self._shingle_db[db_key][similar_hp_tracks[0]][1]
 
             if diff == 'Easy':
