@@ -1,7 +1,5 @@
 from datasketch import MinHash, MinHashLSH
-# from slopes_poc import data_generator as genDat
 import slopeMap as sm
-import numpy as np
 import pandas as pd
 from TrackDifficulty import TrackDifficulty
 import OsmTrack
@@ -9,12 +7,10 @@ import os
 import json
 
 
-# from slopes_poc import poc, data_generator
-
-
 class DifficultyEvaluator:
     gpx_dir_path = 'hp\\gpx'
-    slopes_dir_path = 'hp\\tracks'
+    pts_dir_path = 'hp\\tracks'
+    shingles_dir_path = 'hp\\shingles'
     seen_path = 'hp\\seen.json'
 
     def __init__(self, area_fname, area_topleft, shingle_length):
@@ -32,8 +28,6 @@ class DifficultyEvaluator:
         """
         Converts the given track into a set of shingles.
         :param points: a pandas df containing the lat lon of the points consisting a gps track.
-        :param factor: factor of segment size of shingle
-        :param shingle_length: number of path segments per shingle
         :return: a set of the slope-shingles appearing in the track.
         """
         pts = points.to_numpy()
@@ -79,17 +73,29 @@ class DifficultyEvaluator:
         return result
 
     @staticmethod
+    def _calc_hp_slopes(dictionary: dict):
+        """
+        reformats dictionary into the form {key: [slopes, difficulty]}
+        where slopes is a list of floats and difficulty is a string
+        """
+        res = {}
+        for key in dictionary.keys():
+            slope = sm.compute_slope(dictionary[key][0], dictionary[key][1], dictionary[key][2])
+            res[key] = [slope, dictionary[key][-1]]
+        return res
+
+    @staticmethod
     def get_hp_slopes(length):
         """
         collects tracks from hp dataset which match the length of a given path
         """
-        path = os.path.join(DifficultyEvaluator.slopes_dir_path, str(sm.get_length_tag(length)) + '.json')
+        path = os.path.join(DifficultyEvaluator.pts_dir_path, str(sm.get_length_tag(length)) + '.json')
         dictionary = {}
         if os.path.exists(path):
             with open(path, "r") as f:
                 file = f.read()
             dictionary = json.loads(file)
-        return dictionary
+        return DifficultyEvaluator._calc_hp_slopes(dictionary)
 
     def get_hp_shingled_tracks(self, path_length):
         """
@@ -98,14 +104,40 @@ class DifficultyEvaluator:
         """
         # currently assume data saved is slopes of same tick as osms one
         # in the future create function that reads gps coords into correctly ticked data
-        db_key = str(sm.get_length_tag(path_length)) + str(self._shingle_length)
+        db_key = str(sm.get_length_tag(path_length)) + "shingle_len" + str(self._shingle_length)
+
+        # checks if data was already gathered during this run
         if db_key in self._shingle_db.keys():
             return self._shingle_db[db_key]
+
+        # checks if data was already gathered during some other run
+        path = os.path.join(DifficultyEvaluator.shingles_dir_path, db_key + '.json')
+        if os.path.exists(path):
+            with open(path, "r") as f:
+                file = f.read()
+            data_jason = json.loads(file)
+            tmp = {}
+            for key in data_jason.keys():
+                tmp[key] = [set(data_jason[key][0]), data_jason[key][1]]
+            self._shingle_db[db_key] = tmp
+            return self._shingle_db[db_key]
+
+        # calculates the shingles according to parameters
         slopes = self.get_hp_slopes(path_length)
         res = {}
+        res_json = {}
         for key in slopes.keys():
-            res[key] = [self.shingle_slopes(slopes[key][0], self._shingle_length), slopes[key][1]]
+            shingled = self.shingle_slopes(slopes[key][0], self._shingle_length)
+            res[key] = [shingled, slopes[key][1]]
+            res_json[key] = [list(shingled), slopes[key][1]]
+
+        # saves the data both for run and locally for future runs
         self._shingle_db[db_key] = res
+        if not os.path.exists(DifficultyEvaluator.shingles_dir_path):
+            os.makedirs(DifficultyEvaluator.shingles_dir_path)
+        with open(path, 'w') as f:
+            json.dump(res_json, f, indent=4)
+
         return res
 
     @staticmethod
@@ -147,11 +179,12 @@ class DifficultyEvaluator:
         similar_hp_tracks = self.get_similar_tracks(osm_track)
 
         # For tests
-        # print('similar_tracks' + str(similar_hp_tracks))
+        print('similar_tracks' + str(similar_hp_tracks))
 
         if similar_hp_tracks:
             pts = osm_track.gps_points.iloc[:, :-1]
-            db_key = str(sm.get_length_tag(sm.compute_track_km(pts.to_numpy())[-1])) + str(self._shingle_length)
+            length = sm.compute_track_km(pts.to_numpy())[-1]
+            db_key = str(sm.get_length_tag(length)) + "shingle_len" + str(self._shingle_length)
             diff = self._shingle_db[db_key][similar_hp_tracks[0]][1]
 
             if diff == 'Easy':
