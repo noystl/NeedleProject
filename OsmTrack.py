@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 import math
+import folium
 from PointTag import PointTag
 from TrackLength import TrackLength
 from TrackDifficulty import TrackDifficulty
@@ -15,7 +16,6 @@ class OsmTrack:
 
     def __init__(self, segment, track_id):
         self.CLOSENESS_THRESH_METERS = 200
-        self.LOOP_THRESH_METERS = 100
         self.SAMPLING_RATIO = 1 / 10
         self.MID_LENGTH_THRESH = 5  # Tracks who's length is between 20m to 40m are considered as medium-length track.
         self.LONG_THRESH = 20  # Tracks longer then 40m are considered long.
@@ -85,7 +85,7 @@ class OsmTrack:
              } for p in self.segment.points])
         return gps_points
 
-    def deduce_track_shape(self) -> TrackShape:  # Todo: test more thoroughly
+    def deduce_track_shape(self, thresh=100) -> TrackShape:
         """
         Infers the general shape of the track by looking at the distance between it's start and end points.
         :return: The shape of the track (LOOP if it's a closed curve, and CURVE otherwise)
@@ -93,7 +93,7 @@ class OsmTrack:
         end_point_idx = self.gps_points.shape[0] - 1
         dist = geodesic([self.gps_points.lat[0], self.gps_points.lon[0]],
                         [self.gps_points.lat[end_point_idx], self.gps_points.lon[end_point_idx]]).m
-        return TrackShape.LOOP if dist < self.LOOP_THRESH_METERS else TrackShape.CURVE
+        return TrackShape.LOOP if dist < thresh else TrackShape.CURVE
 
     def get_track_boundaries(self) -> dict:
         """
@@ -143,3 +143,11 @@ class OsmTrack:
         dict_repr['attributes'] = list(attributes)
         dict_repr['boundaries'] = self.boundaries
         return dict_repr
+
+    def plot(self):                                                                     # For tests
+        location_x = (self.boundaries['north'] + self.boundaries['south']) / 2
+        location_y = (self.boundaries['west'] + self.boundaries['east']) / 2
+        output_map = folium.Map(location=[location_x, location_y], zoom_start=13)
+        points = [(row[0], row[1]) for row in self.gps_points[['lat', 'lon']].values]
+        folium.PolyLine(points, color='blue', opacity=0.5).add_to(output_map)
+        output_map.save('track' + str(self.id) + '_plot.html')
