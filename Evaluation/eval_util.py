@@ -30,6 +30,9 @@ def get_exp_dataframe(attr_name: str, data_type='validation') -> pd.DataFrame:
     if attr_name == 'shape':
         real_values = ['point to point', 'point to point', 'point to point', 'point to point', 'point to point',
                        'point to point', 'point to point', ]
+
+    elif attr_name == 'features':
+        real_values = [['Waterfall', 'River', 'Views'], [], [], [], [], [], []]
     else:
         real_values = ['Difficult', 'Intermediate', 'Intermediate', 'Intermediate', 'Intermediate',
                        'Difficult', 'Difficult']

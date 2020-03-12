@@ -15,8 +15,6 @@ class OsmTrack:
     """
 
     def __init__(self, segment, track_id):
-        self.CLOSENESS_THRESH_METERS = 200
-        self.SAMPLING_RATIO = 1 / 10
         self.MID_LENGTH_THRESH = 5  # Tracks who's length is between 20m to 40m are considered as medium-length track.
         self.LONG_THRESH = 20  # Tracks longer then 40m are considered long.
         self.id = track_id
@@ -60,18 +58,21 @@ class OsmTrack:
                                [self.gps_points.lat[i + 1], self.gps_points.lon[i + 1]]).km
         return length
 
-    def is_close(self, point: pd.DataFrame) -> bool:
+    def is_close(self, point: pd.DataFrame, closeness_thresh=200, samp_ratio=1/10) -> bool:
         """
         Returns true iff the minimal distance of the interest point from the track is smaller than some threshold.
         :param point: a pandas df (lat, lon), containing the coordinates of an interest point.
+        :param closeness_thresh: we say that an interest point belongs to this track if the minimal distance between
+        the interest point to one of the track's points is smaller then closeness_thresh meters.
+        :param samp_ratio: the relative part of the track's points we sample for the closeness check.
         :return: True if the point is close to the track, otherwise False.
         """
         min_dist = math.inf
         # We preform the check only on part of the points, to fasten the running time:
-        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * self.SAMPLING_RATIO), 1))
+        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * samp_ratio), 1))
         for idx, track_point in sample.iterrows():
             min_dist = min(min_dist, geodesic([track_point.lat, track_point.lon], [point.lat, point.lon]).m)
-        return min_dist < self.CLOSENESS_THRESH_METERS
+        return min_dist < closeness_thresh
 
     def extract_gps_points(self) -> pd.DataFrame:
         """
