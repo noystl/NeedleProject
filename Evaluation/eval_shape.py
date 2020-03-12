@@ -22,6 +22,7 @@ def eval_shape():
     """
     exp_data = eval_util.get_exp_dataframe('shape')
     exp_data = exp_data.replace('point to point', TrackShape.CURVE.value)
+    exp_data = exp_data.replace('point to point Very', TrackShape.CURVE.value)
     exp_data = exp_data.replace('out and back', TrackShape.CURVE.value)
     tracks = [eval_util.convert_to_osm(exp_data.gpx[i], i) for i in range(len(exp_data))]
     results = {'accuracy': [], 'precision': [], 'recall': []}
@@ -30,8 +31,10 @@ def eval_shape():
         predictions = get_model_predictions(tracks, thresh)
         real = exp_data['real'].values.tolist()
         results['accuracy'].append(metrics.accuracy_score(real, predictions))
-        results['precision'].append(metrics.precision_score(real, predictions, zero_division=1, pos_label=TrackShape.LOOP.value))
-        results['recall'].append(metrics.recall_score(real, predictions, zero_division=1, pos_label=TrackShape.LOOP.value))
+        results['precision'].append(
+            metrics.precision_score(real, predictions, zero_division=1, pos_label=TrackShape.LOOP.value))
+        results['recall'].append(
+            metrics.recall_score(real, predictions, zero_division=1, pos_label=TrackShape.LOOP.value))
     return results
 
 

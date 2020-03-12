@@ -7,8 +7,8 @@ import numpy as np
 import matplotlib.pyplot as plt
 from OsmTrack import OsmTrack
 
-EVAL_DATA_PATH = 'EvalData\\hp\\gpx\\Philippines\\progress.json'  # Just until the real test data will be ready.
-GPX_REL_PATH = 'EvalData\\hp\\gpx\\Philippines\\'
+EVAL_DATA_PATH = 'EvalData\\hp\\gpx\\New Zealand\\progress.json'
+GPX_REL_PATH = 'EvalData\\hp\\gpx\\New Zealand\\'
 
 
 def get_exp_dataframe(attr_name: str) -> pd.DataFrame:
