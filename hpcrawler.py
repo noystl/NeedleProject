@@ -8,6 +8,7 @@ import gpxpy
 import pandas as pd
 import slopeMap as sm
 import re
+import PointTag
 
 # TODO: if we want to crawl more data from website after we've already established a data set,
 #       we need to :
@@ -56,14 +57,17 @@ class HpCrawler:
     tracks_dir_path = 'hp\\tracks'
     seen_path = 'hp\\seen.json'
 
-    def __init__(self, to_crawl):
+
+    def __init__(self, to_crawl, gpx_dir='hp\\gpx', tracks_dir='hp\\tracks', seen='hp\\seen.json'):
         """
         crawls the trails data from "the hiking project"'s site.
         it saves the data and the progress of crawling task under the "hp" directory.
         :param to_crawl: python list of countries to crawl.
                         the countries should start with a capital letter.
         """
-
+        HpCrawler.gpx_dir_path = gpx_dir
+        HpCrawler.tracks_dir_path = tracks_dir
+        HpCrawler.seen_path = seen
         self._countries = to_crawl
         self._country = None  # string
         self._track_idx = str(0)  # always string
@@ -71,6 +75,7 @@ class HpCrawler:
         self._url = None  # python list of strings
         self._driver = None  # firefox(!) driver
         self._driver_status = False
+
 
     def __del__(self):
         """
@@ -122,7 +127,31 @@ class HpCrawler:
         tracks_of_len.update(track_dict)
         HpCrawler._save_dict(tracks_of_len, dict_of_len_path)
 
-# driver setup and web navigating #
+    @staticmethod
+    def check_list(features):
+
+        new_features = []
+        if 'River/Creek' in features:
+            new_features.append(PointTag.RIVER.value)
+        if 'Waterfall' in features:
+            new_features.append(PointTag.WATERFALL.value)
+        if 'Birding' in features:
+            new_features.append(PointTag.BIRDING.value)
+        if 'Cave' in features:
+            new_features.append(PointTag.CAVE.value)
+        if 'Lake' in features:
+            new_features.append(PointTag.WATER.value)
+        elif 'Fishing' in features:
+            new_features.append(PointTag.WATER.value)
+        elif 'Swimming' in features:
+            new_features.append(PointTag.WATER.value)
+        if 'Geological Significance' in features:
+            new_features.append(PointTag.GEOLOGIC.value)
+        if 'Historical Significance' in features:
+            new_features.append(PointTag.HISTORIC.value)
+        return new_features
+
+    # driver setup and web navigating #
     def _setup(self):
         """
         creates a firefox driver which is capable of downloading files without popups
@@ -198,14 +227,29 @@ class HpCrawler:
 
     def _get_page_data(self):
         """
-        gets data from a trail page in the hiking project: track's difficulty.
-        :returns track_dif: string representation of enum of class TrackDifficulty
+        gets data from a trail page in the hiking project: track's difficulty, track length and features.
+        :returns: track_dif: string representation of enum of class TrackDifficulty
+                  track_length: string representation of track length in km
+                  features: a list of strings of features
         """
         e = self._driver.find_elements_by_xpath("//div[@class='stat-block mx-1 pb-2']")[0]
         txt = e.text
         txt = txt.split()
+        track_length = txt[1]
+        track_shape = txt[3:]
+        track_shape = track_shape[:-1]
+        shp = ""
+        for w in track_shape:
+            shp += w + " "
+        shp = shp[:-1]
         track_dif = txt[-1]
-        return track_dif
+        try:
+            features_element = self._driver.find_element_by_xpath("//span[@class='font-body pl-half']")
+            features = features_element.text.split(" · ")
+        except:  # basically should only fail when a page doesnt have features
+            features = []
+        features = HpCrawler.check_list(features)
+        return track_dif, track_length, shp, features
 
     def _collect_track_data(self):
         """
@@ -223,7 +267,7 @@ class HpCrawler:
         self._driver.get(self._url)
 
         # get track's difficulty from site:
-        track_dif = self._get_page_data()
+        track_dif, track_length, track_shape, features = self._get_page_data()
 
         # download gpx file (if needed) and get the download's name:
         if not os.path.exists(j_gpx_path + ".gpx"):  # if gpx file hasn't been downloaded before
@@ -252,7 +296,7 @@ class HpCrawler:
         # was mined before, we'll be able to see which tracks we've processed before.
         # (2) we rather save the gpx files by their <j> because it's unique and it allows
         # us to keep mining from where we've stopped (ints are ordered).
-        progress.update({self._track_idx: [filename, track_dif]})
+        progress.update({self._track_idx: [filename, track_dif, track_length, track_shape, features]})
         self._save_dict(progress, os.path.join(self._path, "progress.json"))
 
         return [filename, track_dif]
