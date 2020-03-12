@@ -1,15 +1,17 @@
 """
 A utility module supplies functions that can be used for any classifier evaluation.
 """
-import os
 import gpxpy.gpx
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
 from OsmTrack import OsmTrack
 
+EVAL_DATA_PATH = 'EvalData\\hp\\gpx\\Philippines\\progress.json'  # Just until the real test data will be ready.
+GPX_REL_PATH = 'EvalData\\hp\\gpx\\Philippines\\'
 
-def get_exp_dataframe(attr_name: str, data_type='validation') -> pd.DataFrame:
+
+def get_exp_dataframe(attr_name: str) -> pd.DataFrame:
     """
     Creates a pandas df with 2 columns: (gpx, real) based on the data in data_path.
     For example, with attr_name == 'difficulty', those might be some typical lines in the df:
@@ -21,28 +23,23 @@ def get_exp_dataframe(attr_name: str, data_type='validation') -> pd.DataFrame:
     ...
     Where the values in gpx are relative paths of gpx files, and real containing the true value of the given attribute
     for the tracks the gpx files represent.
-    :param data_type: the path of the data for the experiment (could be either 'validation' or 'test')
     :param attr_name: we want to test the ability of our model to predict the attribute with this name.
     attr_name should be one of the next strings: 'shape', 'length', 'difficulty', 'features'.
     :return: pandas df (gpx, real, predicted)
     """
-    # For now (until we'll implement functionality for gathering test data):
-    if attr_name == 'shape':
-        real_values = ['point to point', 'point to point', 'point to point', 'point to point', 'point to point',
-                       'point to point', 'point to point', ]
+    assert attr_name in {'difficulty', 'length', 'shape', 'features'}
+    eval_data = pd.read_json(EVAL_DATA_PATH)
+    eval_data = eval_data.transpose()
+    eval_data.columns = ['gpx', 'difficulty', 'length', 'shape', 'features']
+    eval_data = eval_data[['gpx', attr_name]]
+    eval_data.columns = ['gpx', 'real']
 
-    elif attr_name == 'features':
-        real_values = [['Waterfall', 'River', 'Views'], [], [], [], [], [], []]
-    else:
-        real_values = ['Difficult', 'Intermediate', 'Intermediate', 'Intermediate', 'Intermediate',
-                       'Difficult', 'Difficult']
-
-    for_tests = {'gpx': ['hp\\gpx\\Philippines\\0.gpx', 'hp\\gpx\\Philippines\\1.gpx', 'hp\\gpx\\Philippines\\2.gpx',
-                         'hp\\gpx\\Philippines\\3.gpx', 'hp\\gpx\\Philippines\\4.gpx', 'hp\\gpx\\Philippines\\5.gpx',
-                         'hp\\gpx\\Philippines\\6.gpx'],
-                 'real': real_values
-                 }
-    return pd.DataFrame(for_tests, columns=['gpx', 'real'])
+    gpx_paths = []
+    for i in range(len(eval_data)):
+        gpx_paths.append(GPX_REL_PATH + str(i) + '.gpx')
+    gpx_indices_df = pd.DataFrame({'gpx': gpx_paths})
+    eval_data.update(gpx_indices_df)
+    return eval_data
 
 
 def convert_to_osm(gpx_path: str, idx: int) -> OsmTrack:
@@ -52,8 +49,7 @@ def convert_to_osm(gpx_path: str, idx: int) -> OsmTrack:
     :param idx: the index of the track to be created.
     :return: the OsmTrack object created out of the gpx in the given path.
     """
-    path = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', gpx_path))
-    file = open(path, 'r', encoding="utf8")
+    file = open(gpx_path, 'r', encoding="utf8")
     gpx = gpxpy.parse(file)
     return OsmTrack(gpx.tracks[0].segments[0], idx)
 
@@ -76,3 +72,4 @@ def plot_results(eval_results: dict, title: str, xlabel: str):
     plt.plot(loop_thresh, eval_results['recall'], label='recall')
     plt.legend()
     plt.show()
+
