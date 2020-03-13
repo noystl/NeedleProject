@@ -39,4 +39,4 @@ def eval_shape():
 
 
 if __name__ == '__main__':
-    eval_util.plot_results(eval_shape(), 'Shape Classification Quality', 'Loop Threshold')
+    eval_util.plot_results(eval_shape(), 'Shape Classification Quality', 'Loop Threshold(m)')
