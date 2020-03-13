@@ -1,7 +1,5 @@
-from datasketch import MinHash, MinHashLSH
 import slopeMap as sm
 import pandas as pd
-from TrackDifficulty import TrackDifficulty
 import OsmTrack
 import os
 import json
@@ -140,36 +138,6 @@ class DifficultyEvaluator:
 
         return res
 
-    @staticmethod
-    def get_minhash(shingles: set) -> MinHash:
-        """
-        given a set of shingles, creates a MinHash object updated with those shingles.
-        :param shingles: a set of shingles
-        :return: a MinHash object updated with the given shingles.
-        """
-        minhash = MinHash(num_perm=128)
-        for shin in shingles:
-            minhash.update(str(shin).encode('utf-8'))
-        return minhash
-
-    def get_similar_tracks(self, osm_track: OsmTrack) -> list:
-        """
-        Gets a list of hp-track ids that are considered similar enough to the given osm-track.
-        :param osm_track: an osm-track.
-        :return: the list of ids described above.
-        """
-        osm_shingles = self.get_shingles(osm_track.gps_points.iloc[:, :-1])
-        pts = osm_track.gps_points.iloc[:, :-1]
-        length = sm.compute_track_km(pts.to_numpy())[-1]
-        hp_dict = self.get_hp_shingled_tracks(length)
-
-        lsh = MinHashLSH(threshold=0.67, num_perm=128)
-        osm_minhash = self.get_minhash(osm_shingles)
-
-        for hp_track_key in hp_dict:
-            hp_minhash = self.get_minhash(hp_dict[hp_track_key][0])
-            lsh.insert(hp_track_key, hp_minhash)
-        return lsh.query(osm_minhash)
 
     def pred_difficulty(self, osm_track: OsmTrack, k):
         """
@@ -199,34 +167,6 @@ class DifficultyEvaluator:
                 best_key = key
 
         return best_key
-
-
-    def add_difficulty(self, osm_track: OsmTrack):
-        """
-        Discovers the difficulty of the given osm-track and adds it to the object's inner data.
-        :param osm_track: an osm-track.
-        """
-        similar_hp_tracks = self.get_similar_tracks(osm_track)
-
-        # For tests
-        print('similar_tracks' + str(similar_hp_tracks))
-
-        if similar_hp_tracks:
-            pts = osm_track.gps_points.iloc[:, :-1]
-            length = sm.compute_track_km(pts.to_numpy())[-1]
-            db_key = str(sm.get_length_tag(length)) + "shingle_len" + str(self._shingle_length)
-            diff = self._shingle_db[db_key][similar_hp_tracks[0]][1]
-
-            if diff == 'Easy':
-                osm_track.difficulty = TrackDifficulty.EASY
-            elif diff == 'Intermediate':
-                osm_track.difficulty = TrackDifficulty.INTERMEDIATE
-            else:
-                osm_track.difficulty = TrackDifficulty.DIFFICULT
-
-        # todo: handle the case where we have several matches.
-        # todo: handle the case where we don't get any match.
-        # todo: fix the issue with the enum (the if-else above)
 
     @staticmethod
     def get_jacc(set1: set, set2: set) -> float:

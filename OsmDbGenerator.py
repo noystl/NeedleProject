@@ -4,6 +4,7 @@ supported geographic search areas.
 """
 
 from OsmDataCollector import OsmDataCollector
+from TrackDifficulty import TrackDifficulty
 import json
 from EvaluateDifficulty import DifficultyEvaluator
 import os
@@ -14,6 +15,7 @@ COORS_DIR_PATH = '\\tracks_gps_points\\'
 AREAS_DIR_PATH = 'areas_databases\\'
 TILES_PATH = 'supported_areas_tiles\\'
 SHING_ELEM_NUM = 2
+K_NEIGHBORS = 3
 
 
 class OsmDbGenerator:
@@ -29,7 +31,7 @@ class OsmDbGenerator:
                                 }
 
         # We crawl tracks in the following countries out of https://www.hikingproject.com/ :
-        self.countries_to_crawl = ['Philippines', 'Germany', 'Switzerland', 'France']
+        self.countries_to_crawl = ['Philippines']
         self._create_hp_db()
 
     @staticmethod
@@ -75,7 +77,13 @@ class OsmDbGenerator:
             area_osm_data = OsmDataCollector(self.supported_areas[area_name]['box'])
             tracks_dict = {'tracks': {}}
             for track in area_osm_data.tracks:
-                diff_evaluator.add_difficulty(track)
+                difficulty = diff_evaluator.pred_difficulty(track, K_NEIGHBORS)
+                if difficulty == 'Easy':
+                    track.difficulty = TrackDifficulty.EASY
+                elif difficulty == 'Intermediate':
+                    track.difficulty = TrackDifficulty.INTERMEDIATE
+                else:
+                    track.difficulty = TrackDifficulty.DIFFICULT
                 tracks_dict['tracks'][track.id] = track.get_dict_repr()
                 track.gps_points.to_csv(area_coor_dir_name + str(track.id))
             with open(area_dir_name + '\\' + area_name + "_db.json", "w") as write_file:
