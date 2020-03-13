@@ -8,7 +8,7 @@ import gpxpy
 import pandas as pd
 import slopeMap as sm
 import re
-import PointTag
+from PointTag import PointTag
 
 # TODO: if we want to crawl more data from website after we've already established a data set,
 #       we need to :

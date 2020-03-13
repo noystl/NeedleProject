@@ -171,6 +171,36 @@ class DifficultyEvaluator:
             lsh.insert(hp_track_key, hp_minhash)
         return lsh.query(osm_minhash)
 
+    def pred_difficulty(self, osm_track: OsmTrack, k):
+        """
+
+        """
+        osm_shingles = self.get_shingles(osm_track.gps_points.iloc[:, :-1])
+        shingle_dict = self.get_hp_shingled_tracks(osm_track.length)
+        id = shingle_dict.keys()
+
+        shingle_lst = []
+        diff_lst = []
+        # not sure if getting keys and values are returned ordered so im inseting them manually
+        for key in id:
+            shingle_lst.append(shingle_dict[key][0])
+            diff_lst.append(shingle_dict[key][-1])
+
+        best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
+        res_dict = {'Easy': 0, 'Intermediate': 0, 'Difficult': 0, 'Very Difficult': 0}
+        for i in range(len(best_indexes)):
+            res_dict[diff_lst[best_indexes[i]]] += best_values[i]
+
+        best_key = ""
+        best_score = -1
+        for key in res_dict.keys():
+            if res_dict[key] > best_score:
+                best_score = res_dict[key]
+                best_key = key
+
+        return best_key
+
+
     def add_difficulty(self, osm_track: OsmTrack):
         """
         Discovers the difficulty of the given osm-track and adds it to the object's inner data.
@@ -197,3 +227,72 @@ class DifficultyEvaluator:
         # todo: handle the case where we have several matches.
         # todo: handle the case where we don't get any match.
         # todo: fix the issue with the enum (the if-else above)
+
+    @staticmethod
+    def get_jacc(set1: set, set2: set) -> float:
+        """
+        given 2 python sets returns their jaccard similarity
+        :return: float representing similarity (in [0,1])
+        """
+        union_set = set.union(set1, set2)
+        intersection_set = set.intersection(set1, set2)
+        return len(intersection_set) / len(union_set)
+
+    @staticmethod
+    def get_k_best(item: set, cmp_lst: list, k: int):
+        """
+        :param item: set to be scores against
+        :param cmp_lst: list of sets
+        :param k: interger, number of most similar sets
+        :return: list of length <=k of indexes of to set from cmp_lst and a list of same size of their similarity
+        """
+        i = 0
+        lowest_val = 1  # lowest value in the list
+        lowest_index = -1  # index of lowest value (in res not in cmp_lst)
+        res = []
+        res_val = []
+        # push the first k tracks into the list
+        while i < len(cmp_lst):
+
+            similarity = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
+            res.append(i)
+            res_val.append(similarity)
+            if similarity < lowest_val:
+                lowest_index = i
+                lowest_val = similarity
+            i += 1
+            if i == k:
+                break
+        else:  # else happens if cmp_lst length is less than k
+            return res, res_val
+
+        while i < len(cmp_lst):
+            similarity = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
+            if similarity > lowest_val:
+                if lowest_index >= len(res):
+                    x = 1
+                if i == 5:
+                    z = 1
+                res[lowest_index] = i
+                res_val[lowest_index] = similarity
+                tmp = DifficultyEvaluator.get_min_index(res_val)
+                lowest_val = res_val[tmp]
+                lowest_index = tmp
+            i += 1
+
+        return res, res_val
+
+    @staticmethod
+    def get_min_index(lst):
+        """
+        returns the index of the minimal element
+        """
+        min = lst[0]
+        min_index = 0
+        i = 1
+        while i < len(lst):
+            if min > lst[i]:
+                min = lst[i]
+                min_index = i
+            i += 1
+        return min_index
