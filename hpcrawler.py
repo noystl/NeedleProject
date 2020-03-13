@@ -161,10 +161,6 @@ class HpCrawler:
         profile.set_preference('browser.download.folderList', 2)
         profile.set_preference('browser.download.manager.showWhenStarting', False)
 
-        self._path = os.path.join(HpCrawler.gpx_dir_path, self._country)
-        if not os.path.exists(self._path):
-            os.makedirs(self._path)
-
         profile.set_preference('browser.download.dir', os.path.abspath(self._path))
         profile.set_preference('browser.helperApps.neverAsk.saveToDisk', 'application/octet-stream')
         driver = webdriver.Firefox(firefox_profile=profile)
@@ -238,11 +234,15 @@ class HpCrawler:
         track_length = txt[1]
         track_shape = txt[3:]
         track_shape = track_shape[:-1]
+        if track_shape[-1] == 'Very': #if track difficulty is very difficult need to correct
+            track_shape = track_shape[:-1]
+            track_dif = txt[-2] + " " + txt[-1]
+        else:
+            track_dif = txt[-1]
         shp = ""
         for w in track_shape:
             shp += w + " "
         shp = shp[:-1]
-        track_dif = txt[-1]
         try:
             features_element = self._driver.find_element_by_xpath("//span[@class='font-body pl-half']")
             features = features_element.text.split(" · ")
@@ -363,9 +363,11 @@ class HpCrawler:
             print("\n", self._country)
 
             # create gpx folder for country of index i, sets up driver to website:
-            self._driver = self._setup()
+            self._path = os.path.join(HpCrawler.gpx_dir_path, self._country)
+            if not os.path.exists(self._path):
+                os.makedirs(self._path)
 
-            # (try and try until you) log in
+            self._driver = self._setup()
             while 1:
                 try:
                     self._driver.implicitly_wait(HpCrawler.wait)
@@ -384,11 +386,12 @@ class HpCrawler:
             # start mining:
             print("-- collecting and processing")
 
-            for j in np.arange(int(self._track_idx), (len(trail_urls))):  # trails we didn't finish processing
-
-                print("\t", j, "/", len(trail_urls))
+            start_id = int(self._track_idx)
+            for j in np.arange(start_id, (len(trail_urls) + start_id)):
+                # trails we didn't finish processing
+                print("\t", j - start_id, "/", len(trail_urls))
                 self._track_idx = str(j)
-                self._url = trail_urls[j]
+                self._url = trail_urls[j - start_id]
                 features = self._collect_track_data()
 
                 try:
