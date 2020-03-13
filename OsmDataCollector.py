@@ -13,7 +13,6 @@ import mplleaflet
 
 DIR_PATH = 'files\\traces'
 NUMBER_OF_WANTED_FILES = 10  # This is the number of gpx files we download from osm.
-SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
 
 
 class OsmDataCollector:
@@ -23,7 +22,7 @@ class OsmDataCollector:
     (viewpoints, waterways, historic places etc.)
     """
 
-    def __init__(self, bounding_box: list):
+    def __init__(self, bounding_box: list, speed_limit=12):
         """
         :param bounding_box: A tuple of the form: (West, South, East, North). The bounding box of some area is available
         in: https://www.openstreetmap.org/#map=12/48.5490/8.3191 (search the desired place, and press "export")
@@ -31,6 +30,7 @@ class OsmDataCollector:
         """
         self.id = 0
         self.box = bounding_box
+        self.speed_limit = speed_limit
         self.overpass_api = overpy.Overpass()
         self.interest_points_dict = {}  # Contains the interest points coordinates by tag.
         self.tracks = []  # A list of OsmTrack objects.
@@ -81,7 +81,7 @@ class OsmDataCollector:
                             continue
                         curr_track = OsmTrack(seg, self.id)
                         self.id += 1
-                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or curr_track.length <= slopeMap.TICK:
+                        if curr_track.avg_velocity > self.speed_limit or curr_track.length <= slopeMap.TICK:
                             continue
                         self.tracks.append(curr_track)
             except gpxpy.gpx.GPXXMLSyntaxException:
