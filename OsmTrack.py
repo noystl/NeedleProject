@@ -58,7 +58,18 @@ class OsmTrack:
                                [self.gps_points.lat[i + 1], self.gps_points.lon[i + 1]]).km
         return length
 
-    def is_close(self, point: pd.DataFrame, closeness_thresh=200, samp_ratio=1/10) -> bool:
+    def in_boundaries(self, point: pd.DataFrame) -> bool:
+        """
+        Returns true if the given point is in the 'track boundaries', that is, inside the box bounding the
+        track.
+        :param point: a pandas df (lat, lon), containing the coordinates of an interest point.
+        :return: True if the point is in the given track boundaries, False otherwise.
+        """
+        in_lat_boundaries = self.boundaries['south'] <= point.lat <= self.boundaries['north']
+        in_lon_boundaries = self.boundaries['west'] <= point.lon <= self.boundaries['east']
+        return in_lat_boundaries and in_lon_boundaries
+
+    def is_close(self, point: pd.DataFrame, closeness_thresh=200, samp_ratio=1 / 10) -> bool:
         """
         Returns true iff the minimal distance of the interest point from the track is smaller than some threshold.
         :param point: a pandas df (lat, lon), containing the coordinates of an interest point.
@@ -67,6 +78,8 @@ class OsmTrack:
         :param samp_ratio: the relative part of the track's points we sample for the closeness check.
         :return: True if the point is close to the track, otherwise False.
         """
+        if not self.in_boundaries(point):
+            return False
         min_dist = math.inf
         # We preform the check only on part of the points, to fasten the running time:
         sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * samp_ratio), 1))
@@ -145,7 +158,7 @@ class OsmTrack:
         dict_repr['boundaries'] = self.boundaries
         return dict_repr
 
-    def plot(self):                                                                     # For tests
+    def plot(self):  # For tests
         location_x = (self.boundaries['north'] + self.boundaries['south']) / 2
         location_y = (self.boundaries['west'] + self.boundaries['east']) / 2
         output_map = folium.Map(location=[location_x, location_y], zoom_start=13)

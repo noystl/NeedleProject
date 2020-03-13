@@ -12,8 +12,7 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 1  # This is the number of gpx files we download from osm.
-SPEED_LIMIT_KMH = 12  # This is what we consider as the maximal speed for a pedestrian.
+NUMBER_OF_WANTED_FILES = 10  # This is the number of gpx files we download from osm.
 
 
 class OsmDataCollector:
@@ -23,7 +22,7 @@ class OsmDataCollector:
     (viewpoints, waterways, historic places etc.)
     """
 
-    def __init__(self, bounding_box: list):
+    def __init__(self, bounding_box: list, speed_limit=12):
         """
         :param bounding_box: A tuple of the form: (West, South, East, North). The bounding box of some area is available
         in: https://www.openstreetmap.org/#map=12/48.5490/8.3191 (search the desired place, and press "export")
@@ -31,6 +30,7 @@ class OsmDataCollector:
         """
         self.id = 0
         self.box = bounding_box
+        self.speed_limit = speed_limit
         self.overpass_api = overpy.Overpass()
         self.interest_points_dict = {}  # Contains the interest points coordinates by tag.
         self.tracks = []  # A list of OsmTrack objects.
@@ -77,10 +77,11 @@ class OsmDataCollector:
                     for seg in track.segments:
                         if seg.points[0].time is None:  # dismisses private segments
                             continue
+                        if len(seg.points) < 50:
+                            continue
                         curr_track = OsmTrack(seg, self.id)
                         self.id += 1
-                        if curr_track.avg_velocity > SPEED_LIMIT_KMH or len(curr_track.gps_points) < 50 or \
-                                curr_track.length <= slopeMap.TICK:
+                        if curr_track.avg_velocity > self.speed_limit or curr_track.length <= slopeMap.TICK:
                             continue
                         self.tracks.append(curr_track)
             except gpxpy.gpx.GPXXMLSyntaxException:
@@ -109,8 +110,8 @@ class OsmDataCollector:
         :param interest_points: A pandas data frame (lat, lon) containing the coordinates of the interest points.
         :param tag: an Enum representing the type of the interest point.
         """
-        for index, point in interest_points.iterrows():
-            for track in self.tracks:
+        for track in self.tracks:
+            for index, point in interest_points.iterrows():
                 if track.is_close(point):
                     track.add_interest_point(tag)
 

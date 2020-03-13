@@ -17,8 +17,8 @@ def get_model_predictions(tracks: list, neighbors=5) -> list:
     """
     predictions = []
     for track in tracks:
-        track_corner = [math.floor(track.boundaries['south']), math.floor(track.boundaries['west'])]
-        tile_name = 'N' + str(track_corner[0]) + 'E' + str(track_corner[1])
+        track_corner = [math.floor(track.boundaries['south']), math.floor(track.boundaries['east'])]
+        tile_name = 'S' + str(abs(track_corner[0])) + 'E' + str(abs(track_corner[1]))
         diff_evaluator = DifficultyEvaluator(TEST_TILES_PATH + tile_name + '.hgt',
                                              track_corner,
                                              1)
@@ -39,7 +39,7 @@ def eval_difficulty():
     labels = [TrackDifficulty.EASY.value, TrackDifficulty.INTERMEDIATE.value, TrackDifficulty.DIFFICULT.value]
     results = {'accuracy': [], 'precision': [], 'recall': []}
 
-    for thresh in range(1, 3):
+    for thresh in range(1, 2):
         predictions = get_model_predictions(tracks, thresh)
         real = exp_data['real'].values.tolist()
         results['accuracy'].append(metrics.accuracy_score(real, predictions))

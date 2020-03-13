@@ -43,17 +43,16 @@ def get_model_predictions(tracks: list, feature: PointTag, closeness_thresh=200,
                   PointTag.CAVE: """ "natural" = "cave_entrance" """, PointTag.GEOLOGIC: """ "geological" """,
                   PointTag.RIVER: """ "waterway" = "river" """, PointTag.SPRING: """ "natural" = "spring" """}
 
-    predictions = []
+    predictions = [0]*len(tracks)
 
-    for track in tracks:
+    for track_idx, track in enumerate(tracks):
         track_bb = [track.boundaries['west'], track.boundaries['south'], track.boundaries['east'],
                     track.boundaries['north']]
         candidate_points = get_interest_points(track_bb, query_list[feature])
         for idx, point in candidate_points.iterrows():
             if track.is_close(point, closeness_thresh, sample_ratio):
-                predictions.append(1)
+                predictions[track_idx] = 1
                 break
-        predictions.append(0)
     return predictions
 
 
@@ -67,7 +66,9 @@ def adjust_data(exp_data: pd.DataFrame, feature: PointTag):
     """
     feature_tags = []
     for feature_list in exp_data['real']:
-        if feature_list and (feature.value in feature_list):
+        if not feature_list:
+            feature_tags.append(2)              # todo: fix this bad code, I should insert there None ore something.
+        if feature.value in feature_list:
             feature_tags.append(1)
         else:
             feature_tags.append(0)
@@ -88,7 +89,7 @@ def get_results_closeness_exp(exp_data: pd.DataFrame, tracks: list) -> dict:
     """
     results = {'accuracy': [], 'precision': [], 'recall': []}
 
-    for thresh in range(10, 20):
+    for thresh in range(1, 100):
         predictions = get_model_predictions(tracks, PointTag.WATERFALL, thresh)
         real = exp_data['real'].values.tolist()
         results['accuracy'].append(metrics.accuracy_score(real, predictions))
@@ -129,7 +130,8 @@ def eval_interest_points(tested_feature: PointTag) -> tuple:
     """
     exp_data = eval_util.get_exp_dataframe('features')
     adjust_data(exp_data, tested_feature)
-    exp_data = exp_data[exp_data['real'] != 0]
+    exp_data = exp_data[exp_data['real'] != 2]
+    exp_data = exp_data.reset_index(drop=True)
 
     tracks = [eval_util.convert_to_osm(exp_data.gpx[i], i) for i in range(len(exp_data))]
     samp_experiment_results = get_results_sampling_exp(exp_data, tracks)
