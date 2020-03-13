@@ -36,7 +36,12 @@ def visualize_interest_points_recognition():
     pass
 
 
-def visualize_pedestrians_recognition(search_area):
+def visualize_pedestrians_recognition(search_area: dict):
+    """
+    Creates an interactive map where tracks who's average velocity is smaller then 5 km per hour
+    are painted in blue. The rest of the tracks are painted in red.
+    :param search_area: a dictionary of the form {area_name: area data} containing the data of the area we visualize.
+    """
     osm_collector = OsmDataCollector(search_area['box'], speed_limit=math.inf)
     fast_colors = ['red', 'darkred', 'lightred']
     slow_colors = ['blue', 'darkblue']
@@ -64,4 +69,3 @@ if __name__ == '__main__':
              'louvre': {'box': [2.3295, 48.8586, 2.3422, 48.8636]}}
     visualize_pedestrians_recognition(areas['louvre'])
     # visualize_loop_detection(areas['baiersbronn'])
-
