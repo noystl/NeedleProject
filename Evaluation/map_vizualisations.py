@@ -9,9 +9,9 @@ from OsmDataCollector import OsmDataCollector
 
 
 def visualize_loop_detection(search_area):
-    osm_collector = OsmDataCollector(search_area['box'])
+    osm_collector = OsmDataCollector(search_area['box'], speed_limit=math.inf)
     loop_colors = ['red', 'orange', 'darkred', 'lightred']
-    not_loop_colors = ['blue', 'cadetblue', 'darkblue']
+    not_loop_colors = ['blue', 'purple']
     # Calculate the center coordinate of the search area and create a map object in this area:
     location_x = (search_area['box'][1] + search_area['box'][3]) / 2
     location_y = (search_area['box'][0] + search_area['box'][2]) / 2
@@ -21,7 +21,7 @@ def visualize_loop_detection(search_area):
     for track in osm_collector.tracks:
         points = [(row[0], row[1]) for row in track.gps_points.values]
 
-        if track.shape is TrackShape.LOOP:
+        if track.deduce_track_shape(thresh=100) is TrackShape.LOOP:
             folium.PolyLine(points, color=loop_colors[track.id % len(loop_colors)], opacity=0.5).add_to(
                 output_map)
         else:
@@ -66,6 +66,9 @@ def visualize_pedestrians_recognition(search_area: dict):
 
 if __name__ == '__main__':
     areas = {'baiersbronn': {'box': [8.1584, 48.4688, 8.4797, 48.6291]},
-             'louvre': {'box': [2.3295, 48.8586, 2.3422, 48.8636]}}
+             'louvre': {'box': [2.3295, 48.8586, 2.3422, 48.8636]},
+             'disingof': {'box': [34.7782, 32.0822, 34.7970, 32.0920]},
+             'arc_de_triomphe': {'box': [4.80318, 44.1414, 4.8062, 44.14302]},
+             'stone': {'box': [-1.83028, 51.17762, -1.82311, 51.18148]}}
     # visualize_pedestrians_recognition(areas['louvre'])
-    visualize_loop_detection(areas['louvre'])
+    visualize_loop_detection(areas['stone'])
