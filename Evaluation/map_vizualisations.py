@@ -45,6 +45,7 @@ def visualize_pedestrians_recognition(search_area: dict):
     osm_collector = OsmDataCollector(search_area['box'], speed_limit=math.inf)
     fast_colors = ['red', 'darkred', 'lightred']
     slow_colors = ['blue', 'darkblue']
+
     # Calculate the center coordinate of the search area and create a map object in this area:
     location_x = (search_area['box'][1] + search_area['box'][3]) / 2
     location_y = (search_area['box'][0] + search_area['box'][2]) / 2
@@ -67,5 +68,5 @@ def visualize_pedestrians_recognition(search_area: dict):
 if __name__ == '__main__':
     areas = {'baiersbronn': {'box': [8.1584, 48.4688, 8.4797, 48.6291]},
              'louvre': {'box': [2.3295, 48.8586, 2.3422, 48.8636]}}
-    visualize_pedestrians_recognition(areas['louvre'])
-    # visualize_loop_detection(areas['baiersbronn'])
+    # visualize_pedestrians_recognition(areas['louvre'])
+    visualize_loop_detection(areas['louvre'])
