@@ -12,7 +12,6 @@ def visualize_loop_detection(search_area):
     osm_collector = OsmDataCollector(search_area['box'])
     loop_colors = ['red', 'orange', 'darkred', 'lightred']
     not_loop_colors = ['blue', 'cadetblue', 'darkblue']
-
     # Calculate the center coordinate of the search area and create a map object in this area:
     location_x = (search_area['box'][1] + search_area['box'][3]) / 2
     location_y = (search_area['box'][0] + search_area['box'][2]) / 2
