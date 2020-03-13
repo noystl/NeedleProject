@@ -20,7 +20,6 @@ class OsmTrack:
         self.id = track_id
         self.segment = segment
         self.interest_points = set()  # Waterways, historic places, etc...
-        self.interest_points_in_bb_coors = []
         self.gps_points = self.extract_gps_points()  # Pandas df (lat, lon, time)
         self.length = self.calculate_length()  # The length of the track (in km)
         self.avg_velocity = self.calculate_avg_velocity()  # The average velocity of the track (in km\h)
@@ -81,7 +80,6 @@ class OsmTrack:
         """
         if not self.in_boundaries(point):
             return False
-        self.interest_points_in_bb_coors.append(point)
         min_dist = math.inf
         # We preform the check only on part of the points, to fasten the running time:
         sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * samp_ratio), 1))
