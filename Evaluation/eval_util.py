@@ -35,10 +35,9 @@ def get_exp_dataframe(attr_name: str) -> pd.DataFrame:
     eval_data.columns = ['gpx', 'real']
 
     gpx_paths = []
-    for i in range(len(eval_data)):
-        gpx_paths.append(GPX_REL_PATH + str(i) + '.gpx')
-    gpx_indices_df = pd.DataFrame({'gpx': gpx_paths})
-    eval_data.update(gpx_indices_df)
+    for idx, row in eval_data.iterrows():
+        gpx_paths.append(GPX_REL_PATH + str(idx) + '.gpx')
+    eval_data['gpx'] = gpx_paths
     return eval_data
 
 
@@ -52,6 +51,24 @@ def convert_to_osm(gpx_path: str, idx: int) -> OsmTrack:
     file = open(gpx_path, 'r', encoding="utf8")
     gpx = gpxpy.parse(file)
     return OsmTrack(gpx.tracks[0].segments[0], idx)
+
+
+def read_track_to_df(gpx_path: str) -> pd.DataFrame:
+    """
+    Reads a gpx file into a pandas df of the form (lat, lon, time, elev).
+    :param gpx_path: a relative path to a GPX file.
+    :return: a pandas df as described.
+    """
+    file = open(gpx_path, 'r', encoding="utf8")
+    gpx = gpxpy.parse(file)
+    track_pts = gpx.tracks[0].segments[0].points
+    track_df = pd.DataFrame([
+        {'lat': p.latitude,
+         'lon': p.longitude,
+         'time': p.time,
+         'elev': p.elevation
+         } for p in track_pts])
+    return track_df
 
 
 def plot_results(eval_results: dict, title: str, xlabel: str):
@@ -72,4 +89,3 @@ def plot_results(eval_results: dict, title: str, xlabel: str):
     plt.plot(loop_thresh, eval_results['recall'], label='recall')
     plt.legend()
     plt.show()
-
