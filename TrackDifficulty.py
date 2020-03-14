@@ -7,4 +7,4 @@ class TrackDifficulty(Enum):
     """
     EASY = 'easy'
     INTERMEDIATE = 'intermediate'
-    DIFFICULT = 'hard'
+    DIFFICULT = 'difficult'
