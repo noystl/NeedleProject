@@ -89,6 +89,7 @@ class DifficultyEvaluator:
         """
         path = os.path.join(DifficultyEvaluator.pts_dir_path, str(sm.get_length_tag(length)) + '.json')
         dictionary = {}
+
         if os.path.exists(path):
             with open(path, "r") as f:
                 file = f.read()
@@ -135,8 +136,40 @@ class DifficultyEvaluator:
             os.makedirs(DifficultyEvaluator.shingles_dir_path)
         with open(path, 'w') as f:
             json.dump(res_json, f, indent=4)
-
         return res
+
+    def pred_difficulty_known_heights(self, track: pd.DataFrame, k: int):
+        points = track[['lat', 'lon']]
+        pts = points.to_numpy()
+        elev = track['elev']
+        path_length = sm.compute_track_km(pts)[-1]
+        slopes = sm.compute_slope(pts, elev, path_length)
+        osm_shingles = self.shingle_slopes(slopes, self._shingle_length)
+
+        shingle_dict = self.get_hp_shingled_tracks(path_length)
+        id = shingle_dict.keys()
+
+        shingle_lst = []
+        diff_lst = []
+        # not sure if getting keys and values are returned ordered so im inseting them manually
+        for key in id:
+            shingle_lst.append(shingle_dict[key][0])
+            diff_lst.append(shingle_dict[key][-1])
+
+        best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
+
+        res_dict = {'Easy': 0, 'Intermediate': 0, 'Difficult': 0, 'Very Difficult': 0}
+        for i in range(len(best_indexes)):
+            res_dict[diff_lst[best_indexes[i]]] += best_values[i]
+
+        best_key = ""
+        best_score = -1
+        for key in res_dict.keys():
+            if res_dict[key] > best_score:
+                best_score = res_dict[key]
+                best_key = key
+
+        return best_key
 
 
     def pred_difficulty(self, osm_track: OsmTrack, k):
@@ -219,7 +252,6 @@ class DifficultyEvaluator:
                 lowest_val = res_val[tmp]
                 lowest_index = tmp
             i += 1
-
         return res, res_val
 
     @staticmethod
