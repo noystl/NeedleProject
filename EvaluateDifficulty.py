@@ -3,6 +3,7 @@ import pandas as pd
 import OsmTrack
 import os
 import json
+import TrackDifficulty as td
 
 
 class DifficultyEvaluator:
@@ -65,6 +66,7 @@ class DifficultyEvaluator:
         where 0 is -90 defree, 1 is -80 ... 19 is 90 degrees
         """
         # the scaling values as whole integers 0 to 19 is to allow for creating shingles of multiple slopes
+        # 0 to 36
         result = []
         for slope in slopes:
             result.append(int((slope // 10) + 9))
@@ -144,6 +146,8 @@ class DifficultyEvaluator:
         elev = track['elev']
         path_length = sm.compute_track_km(pts)[-1]
         slopes = sm.compute_slope(pts, elev, path_length)
+        if path_length < 0.3:
+            return "Failure"
         osm_shingles = self.shingle_slopes(slopes, self._shingle_length)
 
         shingle_dict = self.get_hp_shingled_tracks(path_length)
@@ -151,14 +155,18 @@ class DifficultyEvaluator:
 
         shingle_lst = []
         diff_lst = []
-        # not sure if getting keys and values are returned ordered so im inseting them manually
+        # not sure if getting keys and values are returned ordered so im inserting them manually
         for key in id:
             shingle_lst.append(shingle_dict[key][0])
             diff_lst.append(shingle_dict[key][-1])
 
         best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
+        #best_indexes, best_values = DifficultyEvaluator.get_thresh_best(osm_shingles, shingle_lst, k)
 
-        res_dict = {'Easy': 0, 'Intermediate': 0, 'Difficult': 0, 'Very Difficult': 0}
+        res_dict = {td.TrackDifficulty.EASY.value: 0, td.TrackDifficulty.INTERMEDIATE.value: 0,
+                    td.TrackDifficulty.DIFFICULT.value: 0, td.TrackDifficulty.V_DIFFICULT.value: 0}
+        # res_dict = {'Easy': 0, 'Intermediate': 0,
+        #             'Difficult': 0, 'Very Difficult': 0}
         for i in range(len(best_indexes)):
             res_dict[diff_lst[best_indexes[i]]] += best_values[i]
 
@@ -188,7 +196,8 @@ class DifficultyEvaluator:
             diff_lst.append(shingle_dict[key][-1])
 
         best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
-        res_dict = {'Easy': 0, 'Intermediate': 0, 'Difficult': 0, 'Very Difficult': 0}
+        res_dict = {td.TrackDifficulty.EASY: 0, td.TrackDifficulty.INTERMEDIATE: 0,
+                    td.TrackDifficulty.DIFFICULT: 0, td.TrackDifficulty.V_DIFFICULT: 0}
         for i in range(len(best_indexes)):
             res_dict[diff_lst[best_indexes[i]]] += best_values[i]
 
@@ -226,7 +235,6 @@ class DifficultyEvaluator:
         res_val = []
         # push the first k tracks into the list
         while i < len(cmp_lst):
-
             similarity = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
             res.append(i)
             res_val.append(similarity)
@@ -242,10 +250,6 @@ class DifficultyEvaluator:
         while i < len(cmp_lst):
             similarity = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
             if similarity > lowest_val:
-                if lowest_index >= len(res):
-                    x = 1
-                if i == 5:
-                    z = 1
                 res[lowest_index] = i
                 res_val[lowest_index] = similarity
                 tmp = DifficultyEvaluator.get_min_index(res_val)
@@ -268,3 +272,25 @@ class DifficultyEvaluator:
                 min_index = i
             i += 1
         return min_index
+
+    @staticmethod
+    def get_thresh_best(item: set, cmp_lst: list, gap):
+
+        values = []
+        max_val = -1
+        max_index = -1
+        for i in range(len(cmp_lst)):
+            j = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
+            if j > max_val:
+                max_val = j
+                max_index = i
+            values.append(j)
+
+        res = []
+        res_val = []
+        for i in range(len(cmp_lst)):
+            if values[i] >= max_val - gap:
+                res.append(i)
+                res_val.append(values[i])
+
+        return res, res_val
