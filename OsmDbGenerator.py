@@ -77,7 +77,7 @@ class OsmDbGenerator:
             area_osm_data = OsmDataCollector(self.supported_areas[area_name]['box'])
             tracks_dict = {'tracks': {}}
             for track in area_osm_data.tracks:
-                difficulty = diff_evaluator.pred_difficulty(track, K_NEIGHBORS)
+                difficulty = diff_evaluator.pred_difficulty(track, K_NEIGHBORS)     # Todo: fix this bad code.
                 if difficulty == 'Easy':
                     track.difficulty = TrackDifficulty.EASY
                 elif difficulty == 'Intermediate':
