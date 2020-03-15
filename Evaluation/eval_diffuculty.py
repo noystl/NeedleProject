@@ -23,7 +23,7 @@ def get_model_predictions(tracks: list, shingle_length=1, neighbors=5) -> list:
                                          shingle_length)
     for track in tracks:
         difficulty = diff_evaluator.pred_difficulty_known_heights(track, neighbors)
-        predictions.append(difficulty)
+        predictions.append(difficulty.value)
     return predictions
 
 
