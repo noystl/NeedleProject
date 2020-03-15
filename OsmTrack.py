@@ -160,11 +160,3 @@ class OsmTrack:
         dict_repr['attributes'] = list(attributes)
         dict_repr['boundaries'] = self.boundaries
         return dict_repr
-
-    def plot(self):  # For tests
-        location_x = (self.boundaries['north'] + self.boundaries['south']) / 2
-        location_y = (self.boundaries['west'] + self.boundaries['east']) / 2
-        output_map = folium.Map(location=[location_x, location_y], zoom_start=13)
-        points = [(row[0], row[1]) for row in self.gps_points[['lat', 'lon']].values]
-        folium.PolyLine(points, color='blue', opacity=0.5).add_to(output_map)
-        output_map.save('track' + str(self.id) + '_plot.html')
