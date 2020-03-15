@@ -4,10 +4,6 @@ the request.
 
 Command-Line Arguments Example:
 baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
-
-Note:
-Pay attention that we don't have a real osm-DB yet, so in order to run this module, please generate a fake DB first
-with createExampData.
 """
 
 import argparse
@@ -223,9 +219,8 @@ def plot_output(args, results: list, tracks_data: dict):
 if __name__ == '__main__':
     """
     Gets the user track preferences as command-line arguments, finds the most similar tracks to the request, and 
-    (in the future) presents the results to the user. The presentation of the results now is temporal and mainly 
-    used for testing.
-    Usage Example: baiersbronn 48.5919 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
+    (in the future) presents the results to the user.
+    Usage Example: baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
     """
     arg_parser = init_arg_parser()
     command_line_args = arg_parser.parse_args()
