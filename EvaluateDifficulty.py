@@ -172,13 +172,13 @@ class DifficultyEvaluator:
             if res_dict[key] > best_score:
                 best_score = res_dict[key]
                 best_key = key
-        if diff_lst[best_indexes[best_key]] == td.TrackDifficulty.EASY.value:
+        if best_key == td.TrackDifficulty.EASY.value:
             result = td.TrackDifficulty.EASY
-        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.INTERMEDIATE.value:
+        elif best_key == td.TrackDifficulty.INTERMEDIATE.value:
             result = td.TrackDifficulty.INTERMEDIATE
-        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.DIFFICULT.value:
+        elif best_key == td.TrackDifficulty.DIFFICULT.value:
             result = td.TrackDifficulty.DIFFICULT
-        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.V_DIFFICULT.value:
+        elif best_key == td.TrackDifficulty.V_DIFFICULT.value:
             result = td.TrackDifficulty.V_DIFFICULT
         return result
 
@@ -209,18 +209,13 @@ class DifficultyEvaluator:
             if res_dict[key] > best_score:
                 best_score = res_dict[key]
                 best_key = key
-
-        for key in res_dict.keys():
-            if res_dict[key] > best_score:
-                best_score = res_dict[key]
-                best_key = key
-        if diff_lst[best_indexes[best_key]] == td.TrackDifficulty.EASY.value:
+        if best_key == td.TrackDifficulty.EASY.value:
             result = td.TrackDifficulty.EASY
-        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.INTERMEDIATE.value:
+        elif best_key == td.TrackDifficulty.INTERMEDIATE.value:
             result = td.TrackDifficulty.INTERMEDIATE
-        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.DIFFICULT.value:
+        elif best_key == td.TrackDifficulty.DIFFICULT.value:
             result = td.TrackDifficulty.DIFFICULT
-        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.V_DIFFICULT.value:
+        elif best_key == td.TrackDifficulty.V_DIFFICULT.value:
             result = td.TrackDifficulty.V_DIFFICULT
         return result
 

@@ -2,6 +2,7 @@ import os
 import overpy
 import pandas as pd
 import json
+import sklearn
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from Evaluation import eval_util
 from PointTag import PointTag
@@ -121,9 +122,9 @@ def get_exp_results(exp_data: pd.DataFrame, tracks: list, tracks_candidates: lis
     for ratio in range(1, RATIO_MAX + 1):
         print("\tratio: ", 1/ratio)
         for thresh in range(0, THRESH_MAX + 1, THRESH_STEP):
-            print("\t\tthresh: ", thresh)  # TODO do we need the 0?
+            print("\t\tthresh: ", thresh)
             predictions = get_model_predictions(tracks, tracks_candidates, thresh, sample_ratio=(1/ratio))
-            results['accuracy'].append(accuracy_score(real, predictions))
+            results['accuracy'].append(accuracy_score(real, predictions, zero_division=1))
             results['precision'].append(precision_score(real, predictions))
             results['recall'].append(recall_score(real, predictions))
     return results
@@ -163,7 +164,7 @@ def get_candidates(area_path, tested_feature, tracks) -> list:
 
 def eval_interest_points(tested_feature: PointTag) -> dict:
     """
-    Evaluates the ability of the model to classify the tracks by difficulty.
+    Evaluates the ability of the model to associate interest points to a track, over the New Zealand Data.
     :param tested_feature: we will evaluate the ability of the model to check if an interest point of this types
     belongs to a track.
     :returns: a dictionary of the form {'accuracy': [], 'precision': [], 'recall': []} containing the values
@@ -171,7 +172,7 @@ def eval_interest_points(tested_feature: PointTag) -> dict:
     """
     print("setup...")
 
-    area_path = 'f_p_exp\\nz'
+    area_path = 'interest_points_eval\\nz'
     exp_data = eval_util.get_exp_dataframe('features')
     adjust_data(exp_data, tested_feature)
     exp_data = exp_data[(exp_data['real'] == 1) | (exp_data['real'] == 0)]
@@ -180,15 +181,12 @@ def eval_interest_points(tested_feature: PointTag) -> dict:
     tracks = [eval_util.convert_to_osm(exp_data.gpx[i], i) for i in range(len(exp_data))]
 
     candidates = get_candidates(area_path, tested_feature, tracks)
-
+    print(exp_data)
     print("experimenting...")
-    res_file_path = os.path.join(area_path, "results.json")
+    res_file_path = os.path.join(area_path, tested_feature.value + ".json")
     if not os.path.exists(res_file_path):
         exp_results = get_exp_results(exp_data, tracks, candidates)
-        print("len of recall:", len(exp_results['recall']))
         with open(res_file_path, 'w') as f:
-            # json.dump({'accuracy': str(exp_results['accuracy']), 'precision': str(exp_results['precision']),
-            #            'recall': str(exp_results['recall'])}, f, indent=4)
             json.dump(exp_results, f, indent=4)
 
     else:
@@ -196,7 +194,6 @@ def eval_interest_points(tested_feature: PointTag) -> dict:
             file = f.read()
         exp_results = json.loads(file)
 
-    # closeness_experiment_results = get_results_closeness_exp(exp_data, tracks)
     return exp_results
 
 
