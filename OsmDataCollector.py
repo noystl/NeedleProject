@@ -2,7 +2,7 @@ import os
 from OsmTrack import OsmTrack
 from PointTag import PointTag
 from TrackShape import TrackShape
-import slopeMap
+import slopeMap as sm
 import gpxpy.gpx
 import wget
 import shutil
@@ -12,8 +12,6 @@ import matplotlib.pyplot as plt
 import mplleaflet
 
 DIR_PATH = 'files\\traces'
-NUMBER_OF_WANTED_FILES = 10  # This is the number of gpx files we download from osm.
-
 
 class OsmDataCollector:
     """
@@ -22,7 +20,7 @@ class OsmDataCollector:
     (viewpoints, waterways, historic places etc.)
     """
 
-    def __init__(self, bounding_box: list, speed_limit=12):
+    def __init__(self, bounding_box: list, speed_limit=12, shing_length=1, wanted_files=10):
         """
         :param bounding_box: A tuple of the form: (West, South, East, North). The bounding box of some area is available
         in: https://www.openstreetmap.org/#map=12/48.5490/8.3191 (search the desired place, and press "export")
@@ -31,6 +29,8 @@ class OsmDataCollector:
         self.id = 0
         self.box = bounding_box
         self.speed_limit = speed_limit
+        self.shing_length = shing_length
+        self.wanted_files_num = wanted_files
         self.overpass_api = overpy.Overpass()
         self.interest_points_dict = {}  # Contains the interest points coordinates by tag.
         self.tracks = []  # A list of OsmTrack objects.
@@ -57,7 +57,7 @@ class OsmDataCollector:
         os.makedirs(DIR_PATH)
         print("saving gpx files...")
 
-        for i in range(NUMBER_OF_WANTED_FILES):
+        for i in range(self.wanted_files_num):
             url = self._create_url(i)
             filename = wget.download(url, out=DIR_PATH)
             os.rename(filename, os.path.join(DIR_PATH, "tracks" + str(i) + ".gpx"))
@@ -81,7 +81,8 @@ class OsmDataCollector:
                             continue
                         curr_track = OsmTrack(seg, self.id)
                         self.id += 1
-                        if curr_track.avg_velocity > self.speed_limit or curr_track.length <= slopeMap.TICK:
+                        if curr_track.avg_velocity > self.speed_limit or \
+                                curr_track.length < (self.shing_length + 1) * sm.TICK:
                             continue
                         self.tracks.append(curr_track)
             except gpxpy.gpx.GPXXMLSyntaxException:
