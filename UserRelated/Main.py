@@ -195,7 +195,7 @@ def plot_output(args, results: list, tracks_data: dict):
     """
     colors_list = [
         'red', 'green', 'orange', 'lightred', 'pink', 'black', 'blue', 'darkpurple',
-        'darkred', 'cadetblue', 'darkblue', 'darkgreen', 'purple', 'gray', 'lightblue'
+        'darkred', 'cadetblue', 'darkblue', 'darkgreen', 'purple', 'gray'
     ]
 
     # Calculate the center coordinate of the search area and create a map object in this area:
@@ -225,7 +225,7 @@ if __name__ == '__main__':
     Gets the user track preferences as command-line arguments, finds the most similar tracks to the request, and 
     (in the future) presents the results to the user. The presentation of the results now is temporal and mainly 
     used for testing.
-    Usage Example: baiersbronn 48.5919 48.5418 8.3692 8.2202 0 0 0 0 0 1 0 1 1 1 2
+    Usage Example: baiersbronn 48.5919 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
     """
     arg_parser = init_arg_parser()
     command_line_args = arg_parser.parse_args()
