@@ -11,7 +11,6 @@ import json
 import os
 import folium
 import pandas as pd
-from UserRelated import ResultsTests as tests
 from datasketch import MinHash, MinHashLSH
 from PointTag import PointTag
 from TrackLength import TrackLength
@@ -267,4 +266,4 @@ if __name__ == '__main__':
 
     similar_tracks = lsh.query(user_min_hash)
     plot_output(command_line_args, similar_tracks, tracks_dict)
-    tests.pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)
+    pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)
