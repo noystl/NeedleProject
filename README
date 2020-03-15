@@ -1,0 +1,10 @@
+the following contains information on files appearing in the project - 
+1. EvaluateDifficulty.py - contains a class DifficultyEvaluator used to tag a given tracks difficulty (either OSM track or HP track)
+2. hpcrawler.py - contains a class Hpcrawler which crawls HikingProject.com based on a list of locations that appear in the site
+(operating the class can be done from the main found at the bottom by inputing countries into to_crawl list)
+3. slopeMap.py - contains functions used to process gps tracks (for example calculating distances, slopes and elevation)
+4. TrackDifficulty.py - enum for track difficulty
+5. TrackLength.py - enum for track length
+6. TrackShape.py - enum for length of track
+7. PointTag.py - enum for tags of track features (ex. waterfalls)
+8. hp - directory containing data scaped from HikingProject.com
