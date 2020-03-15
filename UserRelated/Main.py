@@ -181,6 +181,36 @@ def in_geo_limits(args: argparse.Namespace, track_data: dict) -> bool:
             track_data['boundaries']['west'] >= args.west_lim)
 
 
+def pretty_print_results(user_shingles: set, tracks_dict: dict, given_args, result: list):
+    """
+    Prints the preferences of the user and the data on the similar-osm tracks the program had found.
+    :param user_shingles: the shingle set of the user's preferences.
+    :param tracks_dict: a dictionary containing the data we collected over the osm-tracks in the requested area.
+    :param given_args: the given command-line arguments.
+    :param result: a list containing the ids of the osm-tracks the program decided were similar enough to the
+    user's request.
+    """
+    print('USER REQUEST: ')
+    print('Track attributes: ' + str(user_shingles))
+    print('Location: ')
+    print('\t North: ' + str(given_args.north_lim))
+    print('\t South: ' + str(given_args.south_lim))
+    print('\t East: ' + str(given_args.east_lim))
+    print('\t West: ' + str(given_args.west_lim))
+    print('\n')
+
+    print('TRACKS FOUND: ')
+    for t_id in result:
+        print('Track id: ' + str(t_id))
+        print('Track attributes: ' + str(set(tracks_dict[t_id]['attributes'])))
+        print('Location: ')
+        print('\t North: ' + str(tracks_dict[t_id]['boundaries']['north']))
+        print('\t South: ' + str(tracks_dict[t_id]['boundaries']['south']))
+        print('\t East: ' + str(tracks_dict[t_id]['boundaries']['east']))
+        print('\t West: ' + str(tracks_dict[t_id]['boundaries']['west']))
+        print('\n')
+
+
 def plot_output(args, results: list, tracks_data: dict):
     """
     Plots the similar tracks found and their attributes on an interactive map (kept in the file fol.html)
@@ -237,6 +267,4 @@ if __name__ == '__main__':
 
     similar_tracks = lsh.query(user_min_hash)
     plot_output(command_line_args, similar_tracks, tracks_dict)
-
-    # For testing:
     tests.pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)
