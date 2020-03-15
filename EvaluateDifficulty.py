@@ -198,8 +198,8 @@ class DifficultyEvaluator:
             diff_lst.append(shingle_dict[key][-1])
 
         best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
-        res_dict = {td.TrackDifficulty.EASY: 0, td.TrackDifficulty.INTERMEDIATE: 0,
-                    td.TrackDifficulty.DIFFICULT: 0, td.TrackDifficulty.V_DIFFICULT: 0}
+        res_dict = {td.TrackDifficulty.EASY.value: 0, td.TrackDifficulty.INTERMEDIATE.value: 0,
+                    td.TrackDifficulty.DIFFICULT.value: 0, td.TrackDifficulty.V_DIFFICULT.value: 0}
         for i in range(len(best_indexes)):
             res_dict[diff_lst[best_indexes[i]]] += best_values[i]
 
