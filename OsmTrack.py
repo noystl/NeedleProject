@@ -76,13 +76,16 @@ class OsmTrack:
         :param closeness_thresh: we say that an interest point belongs to this track if the minimal distance between
         the interest point to one of the track's points is smaller then closeness_thresh meters.
         :param samp_ratio: the relative part of the track's points we sample for the closeness check.
+                the sampling is done deterministically.
         :return: True if the point is close to the track, otherwise False.
         """
         if not self.in_boundaries(point):
             return False
         min_dist = math.inf
         # We preform the check only on part of the points, to fasten the running time:
-        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * samp_ratio), 1))
+        num_of_samples = max(int(self.gps_points.shape[0] * samp_ratio), 1)  # sample at least one point
+        step_size = int(len(self.gps_points) / num_of_samples)
+        sample = self.gps_points[0:-1: step_size]
         for idx, track_point in sample.iterrows():
             min_dist = min(min_dist, geodesic([track_point.lat, track_point.lon], [point.lat, point.lon]).m)
         return min_dist < closeness_thresh
