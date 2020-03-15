@@ -1,17 +1,15 @@
 import os
 from OsmTrack import OsmTrack
 from PointTag import PointTag
-from TrackShape import TrackShape
 import slopeMap as sm
 import gpxpy.gpx
 import wget
 import shutil
 import pandas as pd
 import overpy
-import matplotlib.pyplot as plt
-import mplleaflet
 
 DIR_PATH = 'files\\traces'
+
 
 class OsmDataCollector:
     """
@@ -23,6 +21,8 @@ class OsmDataCollector:
     def __init__(self, bounding_box: list, speed_limit=12, shing_length=1, wanted_files=10):
         """
         :param bounding_box: A tuple of the form: (West, South, East, North). The bounding box of some area is available
+        :param speed_limit: all tracks who's average speed is above speed_limit would not be collected.
+        :param wanted_files: the number of wanted gpx data files to download from OpenStreetMap.
         in: https://www.openstreetmap.org/#map=12/48.5490/8.3191 (search the desired place, and press "export")
         For example:  [2.3295, 48.8586, 2.3422, 48.8636] is the bounding box representing the area of the Louvre museum.
         """
@@ -138,38 +138,3 @@ class OsmDataCollector:
         self._get_gpx_files()
         self._collect_filtered_tracks()
         self._handle_interest_points()
-
-
-def plot_by_shape(track: OsmTrack, ax):
-    df = track.gps_points
-    df = df.dropna()
-    if track.shape is TrackShape.LOOP:
-        ax.plot(df['lon'], df['lat'], color='red', linewidth=3, alpha=0.5)
-    else:
-        ax.plot(df['lon'], df['lat'], color='blue', linewidth=3, alpha=0.5)
-
-
-def plot_tracks(tracks_to_plot, interest_points_dict):  # For debugging
-    print("plotting...")
-    fig, ax = plt.subplots()
-    color_palette = {PointTag.RIVER: "r", PointTag.HISTORIC: "m", PointTag.GEOLOGIC: "k", PointTag.WATER: "g",
-                     PointTag.SPRING: "b", PointTag.CAVE: "y", PointTag.BIRDING: "w", PointTag.WATERFALL: "c"}
-    for category in interest_points_dict:
-        points = interest_points_dict[category]
-        if not points.empty:
-            ax.scatter(points['lon'], points['lat'], color=color_palette[category], s=10, edgecolors='black')
-    for track in tracks_to_plot:
-        plot_by_shape(track, ax)
-    mplleaflet.show()
-
-
-if __name__ == "__main__":
-    paris_streets = [2.3314, 48.8461, 2.3798, 48.8643]  # coordinates of the area: left, bottom, right, up
-    louvre = [2.3295, 48.8586, 2.3422, 48.8636]  # coordinates of the area: left, bottom, right, up
-    feldberg = [8.1026, 48.3933, 8.183, 48.4335]  # coordinates of the area: left, bottom, right, up
-    baiersbronn = [8.1584, 48.4688, 8.4797, 48.6291]  # coordinates of the area: left, bottom, right, up
-
-    data_collector = OsmDataCollector(baiersbronn)
-    plot_tracks(data_collector.tracks, data_collector.interest_points_dict)
-
-# (48.854,2.34,48.859,2.35);
