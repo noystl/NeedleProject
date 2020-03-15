@@ -27,7 +27,7 @@ def eval_shape():
     tracks = [eval_util.convert_to_osm(exp_data.gpx[i], i) for i in range(len(exp_data))]
     results = {'accuracy': [], 'precision': [], 'recall': []}
 
-    for thresh in range(1, 100):
+    for thresh in range(1, 125):
         predictions = get_model_predictions(tracks, thresh)
         real = exp_data['real'].values.tolist()
         results['accuracy'].append(metrics.accuracy_score(real, predictions))

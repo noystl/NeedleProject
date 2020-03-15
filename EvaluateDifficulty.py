@@ -45,7 +45,6 @@ class DifficultyEvaluator:
         (values of shingles are integers with up to 2 * <shingle_length> digits)
         """
         singles = DifficultyEvaluator.adjust_slopes(slopes)
-        # print('shingles_list ' + str(singles))
         if shingle_length == 1:
             return set(singles)
         res = []
@@ -66,7 +65,6 @@ class DifficultyEvaluator:
         where 0 is -90 defree, 1 is -80 ... 19 is 90 degrees
         """
         # the scaling values as whole integers 0 to 19 is to allow for creating shingles of multiple slopes
-        # 0 to 36
         result = []
         for slope in slopes:
             result.append(int((slope // 10) + 9))
@@ -161,12 +159,10 @@ class DifficultyEvaluator:
             diff_lst.append(shingle_dict[key][-1])
 
         best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
-        #best_indexes, best_values = DifficultyEvaluator.get_thresh_best(osm_shingles, shingle_lst, k)
 
         res_dict = {td.TrackDifficulty.EASY.value: 0, td.TrackDifficulty.INTERMEDIATE.value: 0,
                     td.TrackDifficulty.DIFFICULT.value: 0, td.TrackDifficulty.V_DIFFICULT.value: 0}
-        # res_dict = {'Easy': 0, 'Intermediate': 0,
-        #             'Difficult': 0, 'Very Difficult': 0}
+
         for i in range(len(best_indexes)):
             res_dict[diff_lst[best_indexes[i]]] += best_values[i]
 
@@ -176,9 +172,15 @@ class DifficultyEvaluator:
             if res_dict[key] > best_score:
                 best_score = res_dict[key]
                 best_key = key
-
-        return best_key
-
+        if diff_lst[best_indexes[best_key]] == td.TrackDifficulty.EASY.value:
+            result = td.TrackDifficulty.EASY
+        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.INTERMEDIATE.value:
+            result = td.TrackDifficulty.INTERMEDIATE
+        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.DIFFICULT.value:
+            result = td.TrackDifficulty.DIFFICULT
+        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.V_DIFFICULT.value:
+            result = td.TrackDifficulty.V_DIFFICULT
+        return result
 
     def pred_difficulty(self, osm_track: OsmTrack, k):
         """
@@ -208,7 +210,19 @@ class DifficultyEvaluator:
                 best_score = res_dict[key]
                 best_key = key
 
-        return best_key
+        for key in res_dict.keys():
+            if res_dict[key] > best_score:
+                best_score = res_dict[key]
+                best_key = key
+        if diff_lst[best_indexes[best_key]] == td.TrackDifficulty.EASY.value:
+            result = td.TrackDifficulty.EASY
+        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.INTERMEDIATE.value:
+            result = td.TrackDifficulty.INTERMEDIATE
+        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.DIFFICULT.value:
+            result = td.TrackDifficulty.DIFFICULT
+        elif diff_lst[best_indexes[best_key]] == td.TrackDifficulty.V_DIFFICULT.value:
+            result = td.TrackDifficulty.V_DIFFICULT
+        return result
 
     @staticmethod
     def get_jacc(set1: set, set2: set) -> float:
@@ -273,24 +287,3 @@ class DifficultyEvaluator:
             i += 1
         return min_index
 
-    @staticmethod
-    def get_thresh_best(item: set, cmp_lst: list, gap):
-
-        values = []
-        max_val = -1
-        max_index = -1
-        for i in range(len(cmp_lst)):
-            j = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
-            if j > max_val:
-                max_val = j
-                max_index = i
-            values.append(j)
-
-        res = []
-        res_val = []
-        for i in range(len(cmp_lst)):
-            if values[i] >= max_val - gap:
-                res.append(i)
-                res_val.append(values[i])
-
-        return res, res_val
