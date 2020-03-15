@@ -3,7 +3,7 @@ This module get a list of preferences from the user as command-line arguments an
 the request.
 
 Command-Line Arguments Example:
-baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
+baiersbronn 48.6 48.52 8.4 8.3 0 0 0 0 0 1 0 1 1 2 2
 """
 
 import argparse
@@ -20,8 +20,7 @@ from TrackShape import TrackShape
 areas_paths = {'baiersbronn':  # Other areas in the future :)
                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
                                                 'areas_databases\\baiersbronn\\baiersbronn_db.json'))}
-USER_ID = 'user'
-SIMILARITY_THRESH = 0.6
+SIMILARITY_THRESH = 0.8
 
 
 def add_limits_args(parser: argparse.ArgumentParser):
@@ -237,19 +236,19 @@ def plot_output(args, results: list, tracks_data: dict):
         folium.PolyLine(points, color=colors_list[int(result_id) % len(colors_list)], opacity=1).add_to(output_map)
 
         folium.Marker(
-            location=[points[-1][0], points[-1][1]],
+            location=[points[0][0], points[0][1]],
             popup='track ' + result_id + '\n' + str(tracks_data[result_id]['attributes']),
             icon=folium.Icon(color=colors_list[int(result_id) % len(colors_list)], icon='info-sign')
         ).add_to(output_map)
 
-    output_map.save('fol.html')
+    output_map.save('recommended_tracks.html')
 
 
 if __name__ == '__main__':
     """
     Gets the user track preferences as command-line arguments, finds the most similar tracks to the request, and 
     (in the future) presents the results to the user.
-    Usage Example: baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
+    Usage Example: baiersbronn 48.6 48.52 8.4 8.3 0 0 0 0 0 1 0 1 1 2 2
     """
     arg_parser = init_arg_parser()
     command_line_args = arg_parser.parse_args()
