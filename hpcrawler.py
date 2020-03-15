@@ -10,24 +10,6 @@ import slopeMap as sm
 import re
 from PointTag import PointTag
 
-# TODO: if we want to crawl more data from website after we've already established a data set,
-#       we need to :
-#       (1) fully re-implement the functions:
-#               * get_page_data -> EASY
-#               * process_track_data -> EASY
-#           to supply the desired functionality.
-#       (2) partially re-implement the function:
-#               * collect_track_data -> LESS EASY
-#           we'll copy the <progress> file, we'll call it <p>.
-#           while questioning the web about the new features we'll get the track's name and
-#           compare it to the ones in <p>, and we will update the corresponding track in <p>
-#           to include the new features. if a track isn't on <p> , we'll mine it all up.
-#       (3) create different:
-#               * directory <tracks_dir_path>: we don't need to overwrite the whole data set.
-#               * file <p>
-#           so maybe we should give them as parameters to the class?
-#
-
 
 class HpCrawler:
     """
@@ -127,7 +109,6 @@ class HpCrawler:
 
     @staticmethod
     def check_list(features):
-
         new_features = []
         if 'River/Creek' in features:
             new_features.append(PointTag.RIVER.value)
@@ -193,6 +174,7 @@ class HpCrawler:
         self._driver.get("https://www.hikingproject.com/")
 
 # collects data #
+
     def _trails_in_urls(self):
         """
         return a list of urls (strings) for tracks in the current country
@@ -232,7 +214,7 @@ class HpCrawler:
         track_length = txt[1]
         track_shape = txt[3:]
         track_shape = track_shape[:-1]
-        if track_shape[-1] == 'Very': #if track difficulty is very difficult need to correct
+        if track_shape[-1] == 'Very':  # if track difficulty is very difficult need to correct
             track_shape = track_shape[:-1]
             track_dif = txt[-2] + " " + txt[-1]
         else:
@@ -297,8 +279,8 @@ class HpCrawler:
 
         return [filename, track_dif]
 
-
 # processes data #
+
     def _process_track_data(self, features):
         """
         process the track's data that was collected.
@@ -307,7 +289,6 @@ class HpCrawler:
                 the track's representation:  dict {<country>_<j>: [points, elevation, length, track_dif]}
                 if the track is to short for processing- returns None
         """
-        # print("\t* processing track") #TODO
 
         points, track_elev = pd.DataFrame({}), pd.DataFrame({})
         filename, track_dif = features
@@ -335,12 +316,6 @@ class HpCrawler:
         return len_tag, \
                {self._country + '_' + self._track_idx: [points.tolist(), track_elev.tolist(), track_len, track_dif]}
 
-        # everything following is related to the old return
-        # compute slopes:
-        slopes = sm.compute_slope(points, track_elev, track_len)
-
-        return len_tag, {self._country + '_' + self._track_idx: [slopes, track_dif]}
-
 # runs functionality:
 
     def crawl(self):
@@ -364,7 +339,7 @@ class HpCrawler:
                 os.makedirs(self._path)
 
             self._driver = self._setup()
-            while 1:
+            while True:
                 try:
                     self._driver.implicitly_wait(HpCrawler.wait)
                     self._log_in()
@@ -384,6 +359,7 @@ class HpCrawler:
 
             start_id = int(self._track_idx)
             for j in np.arange(start_id, (len(trail_urls) + start_id)):
+
                 # trails we didn't finish processing
                 print("\t", j - start_id, "/", len(trail_urls))
                 self._track_idx = str(j)
@@ -401,8 +377,6 @@ class HpCrawler:
                 if track_data is not None:  # the track is long enough
                     HpCrawler._save_track_data(track_data[0], track_data[1])
 
-                    # print("\t\tSAVED")  # TODO
-
                 # update seen after every track processing is completed:
                 seen.update({self._country: [str(int(self._track_idx) + 1), trail_urls]})
                 HpCrawler._save_dict(seen, HpCrawler.seen_path)
@@ -417,6 +391,6 @@ class HpCrawler:
 
 if __name__ == "__main__":
 
-    to_crawl= ['Spain', 'France', 'Nevada']
+    to_crawl = ['Spain', 'France', 'Nevada']
     crawler = HpCrawler(to_crawl)
     crawler.crawl()
