@@ -234,7 +234,7 @@ class HpCrawler:
     def _collect_track_data(self):
         """
         collects and saves the track's data: difficulty, the gpx file, and it's filename.
-        :return: the track's features: [filename, track_dif]
+        :return: the track's features: [filename, track_dif, track length, track shape, [features]]
         """
 
         progress = HpCrawler._load_dict(os.path.join(self._path, "progress.json"))
