@@ -57,7 +57,6 @@ class HpCrawler:
     tracks_dir_path = 'hp\\tracks'
     seen_path = 'hp\\seen.json'
 
-
     def __init__(self, to_crawl, gpx_dir='hp\\gpx', tracks_dir='hp\\tracks', seen='hp\\seen.json'):
         """
         crawls the trails data from "the hiking project"'s site.
@@ -75,7 +74,6 @@ class HpCrawler:
         self._url = None  # python list of strings
         self._driver = None  # firefox(!) driver
         self._driver_status = False
-
 
     def __del__(self):
         """
@@ -257,8 +255,6 @@ class HpCrawler:
         :return: the track's features: [filename, track_dif]
         """
 
-        # print("\t* collecting track") #TODO
-
         progress = HpCrawler._load_dict(os.path.join(self._path, "progress.json"))
         if self._track_idx in progress:  # data was collected previously
             return progress[self._track_idx]
@@ -417,3 +413,10 @@ class HpCrawler:
             # update seen after every country completed:
             seen.update({self._country: HpCrawler.done_tag})
             HpCrawler._save_dict(seen, HpCrawler.seen_path)
+
+
+if __name__ == "__main__":
+
+    to_crawl= ['Spain', 'France', 'Nevada']
+    crawler = HpCrawler()
+    crawler.crawl()
