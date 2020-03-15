@@ -6,7 +6,6 @@ supported geographic search areas.
 from OsmDataCollector import OsmDataCollector
 import json
 from EvaluateDifficulty import DifficultyEvaluator
-from TrackDifficulty import TrackDifficulty
 import os
 import shutil
 
@@ -14,7 +13,7 @@ COORS_DIR_PATH = '\\tracks_gps_points\\'
 AREAS_DIR_PATH = 'areas_databases\\'
 TILES_PATH = 'supported_areas_tiles\\'
 SHING_ELEM_NUM = 2
-K_NEIGHBORS = 3
+K_NEIGHBORS = 25
 
 
 class OsmDbGenerator:
@@ -58,18 +57,10 @@ class OsmDbGenerator:
             self._create_dir(area_coor_dir_name)
 
             area_osm_data = OsmDataCollector(self.supported_areas[area_name]['box'], shing_length=SHING_ELEM_NUM,
-                                             wanted_files=15)
+                                             wanted_files=100)
             tracks_dict = {'tracks': {}}
             for track in area_osm_data.tracks:
                 difficulty = diff_evaluator.pred_difficulty(track, K_NEIGHBORS)
-                # if difficulty == 'Easy':
-                #     track.difficulty = TrackDifficulty.EASY
-                # elif difficulty == 'Intermediate':
-                #     track.difficulty = TrackDifficulty.INTERMEDIATE
-                # elif difficulty == 'Difficult':
-                #     track.difficulty = TrackDifficulty.DIFFICULT
-                # else:
-                #     track.difficulty = TrackDifficulty.V_DIFFICULT
                 track.difficulty = difficulty
                 tracks_dict['tracks'][track.id] = track.get_dict_repr()
                 track.gps_points.to_csv(area_coor_dir_name + str(track.id))
