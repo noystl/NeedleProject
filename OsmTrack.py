@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import math
-import folium
 from PointTag import PointTag
 from TrackLength import TrackLength
 from TrackDifficulty import TrackDifficulty
@@ -102,7 +101,7 @@ class OsmTrack:
              } for p in self.segment.points])
         return gps_points
 
-    def deduce_track_shape(self, thresh=100) -> TrackShape:
+    def deduce_track_shape(self, thresh=30) -> TrackShape:
         """
         Infers the general shape of the track by looking at the distance between it's start and end points.
         :return: The shape of the track (LOOP if it's a closed curve, and CURVE otherwise)
