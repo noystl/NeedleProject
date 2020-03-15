@@ -1,0 +1,58 @@
+####################
+------ README -----
+####################
+
+------ Project Description -----
+The target of this code is to produce a detailed description of hiking tracks, given the coordinates of a geographical
+area. Currently, we support just one geographical area: the surroundings of the town Baiersbronn
+in germany which is a part of the Black Forest reservation, which is a very popular hiking site.
+
+------ Usage -----
+Execute the code in UserRelated/Main.py as described:
+usage: Main.py [-h]
+               {baiersbronn} north_lim south_lim east_lim west_lim waterfall
+               birding river cave lake spring geo historic length difficulty
+               shape
+where the meaning of the requested arguments is as follows:
+
+(0) area: the general geographic area to search tracks in.
+(1) north_lim: northern limit of the search inside the area.
+(2) south_lim: southern limit of the search inside the area.
+(3) east_lim: eastern limit of the search inside the area.
+(4) west_lim: western limit of the search inside the area.
+(5) waterfall: 1 if the wanted track should contain a waterfall, 0 otherwise.
+(6) birding: 1 if the wanted track should contain a bird hide, 0 otherwise.
+(7) river: 1 if the wanted track should contain a river, 0 otherwise.
+(8) cave: 1 if the wanted track should contain a cave, 0 otherwise.
+(9) lake: 1 if the wanted track should contain a lake, 0 otherwise.
+(10) spring: 1 if the wanted track should contain a spring, 0 otherwise.
+(11) geo: 1 if the track should contain a geological interest point, 0 otherwise.
+(12) historic: 1 if the track should contain a historic interest point, 0 otherwise.
+(13) length: 1 for a short track, 2 for medium-length and 3 for long.
+(14) difficulty: 1 for an easy track, 2 for intermediate, 3 for difficult and 4 for very difficult.
+(15) shape: 1 for a loop and 2 for out and back.
+
+Command-Line Arguments Example:
+baiersbronn 48.6 48.52 8.4 8.3 0 0 0 0 0 1 0 1 1 2 2
+
+------ Files Description -----
+The following contains information on files appearing in the project -
+1. EvaluateDifficulty.py - contains a class DifficultyEvaluator used to tag a given tracks difficulty
+   (either OSM track or HP track)
+2. hpcrawler.py - contains a class Hpcrawler which crawls HikingProject.com based on a list of locations that appear in
+   the site (operating the class can be done from the main found at the bottom by inputing countries into to_crawl list)
+3. slopeMap.py - contains functions used to process gps tracks (for example calculating distances, slopes and elevation)
+4. TrackDifficulty.py - enum for track difficulty
+5. TrackLength.py - enum for track length
+6. TrackShape.py - enum for length of track
+7. PointTag.py - enum for tags of track features (ex. waterfalls)
+8. hp - directory containing data scraped from HikingProject.com
+9. OsmDataCollector - crawls OpenStreetMap and gets public tracks. For each of the collected tracks, the module
+   adds additional data and saves it in an OsmTrack object.
+10. OsmTrack - a class containing all of the data collected over some OSM track.
+11. OsmDbGenerator - parses the data collected in the OsmTracks objects into a JASON file called we call 'the osm
+    database of the area'
+12. areas_database - a directory containing the OSM database of the supported areas.
+13. UserRelated/Main - Given that an Osm database had been generated, this module gets requests from the
+    user and returns the most suitable tracks. The output of this module is an interactive map created inside
+    the UserRelated folder.

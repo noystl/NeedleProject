@@ -144,8 +144,6 @@ class DifficultyEvaluator:
         elev = track['elev']
         path_length = sm.compute_track_km(pts)[-1]
         slopes = sm.compute_slope(pts, elev, path_length)
-        if path_length < 0.3:
-            return "Failure"
         osm_shingles = self.shingle_slopes(slopes, self._shingle_length)
 
         shingle_dict = self.get_hp_shingled_tracks(path_length)
@@ -198,8 +196,8 @@ class DifficultyEvaluator:
             diff_lst.append(shingle_dict[key][-1])
 
         best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
-        res_dict = {td.TrackDifficulty.EASY: 0, td.TrackDifficulty.INTERMEDIATE: 0,
-                    td.TrackDifficulty.DIFFICULT: 0, td.TrackDifficulty.V_DIFFICULT: 0}
+        res_dict = {td.TrackDifficulty.EASY.value: 0, td.TrackDifficulty.INTERMEDIATE.value: 0,
+                    td.TrackDifficulty.DIFFICULT.value: 0, td.TrackDifficulty.V_DIFFICULT.value: 0}
         for i in range(len(best_indexes)):
             res_dict[diff_lst[best_indexes[i]]] += best_values[i]
 

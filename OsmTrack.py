@@ -1,7 +1,6 @@
 import pandas as pd
 import numpy as np
 import math
-import folium
 from PointTag import PointTag
 from TrackLength import TrackLength
 from TrackDifficulty import TrackDifficulty
@@ -102,7 +101,7 @@ class OsmTrack:
              } for p in self.segment.points])
         return gps_points
 
-    def deduce_track_shape(self, thresh=100) -> TrackShape:
+    def deduce_track_shape(self, thresh=30) -> TrackShape:
         """
         Infers the general shape of the track by looking at the distance between it's start and end points.
         :return: The shape of the track (LOOP if it's a closed curve, and CURVE otherwise)
@@ -160,11 +159,3 @@ class OsmTrack:
         dict_repr['attributes'] = list(attributes)
         dict_repr['boundaries'] = self.boundaries
         return dict_repr
-
-    def plot(self):  # For tests
-        location_x = (self.boundaries['north'] + self.boundaries['south']) / 2
-        location_y = (self.boundaries['west'] + self.boundaries['east']) / 2
-        output_map = folium.Map(location=[location_x, location_y], zoom_start=13)
-        points = [(row[0], row[1]) for row in self.gps_points[['lat', 'lon']].values]
-        folium.PolyLine(points, color='blue', opacity=0.5).add_to(output_map)
-        output_map.save('track' + str(self.id) + '_plot.html')
