@@ -57,7 +57,7 @@ class OsmDbGenerator:
             self._create_dir(area_coor_dir_name)
 
             area_osm_data = OsmDataCollector(self.supported_areas[area_name]['box'], shing_length=SHING_ELEM_NUM,
-                                             wanted_files=100)
+                                             wanted_files=50)
             tracks_dict = {'tracks': {}}
             for track in area_osm_data.tracks:
                 difficulty = diff_evaluator.pred_difficulty(track, K_NEIGHBORS)
