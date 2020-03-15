@@ -49,6 +49,7 @@ def eval_difficulty(shingle_length=2):
     results = {'accuracy': [], 'precision': [], 'recall': []}
 
     for k in range(1, 55):
+        print('Evaluating for k = ' + str(k))
         predictions = get_model_predictions(tracks, shingle_length, k)
         results['accuracy'].append(metrics.accuracy_score(real, predictions))
         results['precision'].append(metrics.precision_score(real, predictions, labels=labels, average='weighted'))
