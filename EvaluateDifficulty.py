@@ -144,8 +144,6 @@ class DifficultyEvaluator:
         elev = track['elev']
         path_length = sm.compute_track_km(pts)[-1]
         slopes = sm.compute_slope(pts, elev, path_length)
-        if path_length < 0.3:
-            return "Failure"
         osm_shingles = self.shingle_slopes(slopes, self._shingle_length)
 
         shingle_dict = self.get_hp_shingled_tracks(path_length)
