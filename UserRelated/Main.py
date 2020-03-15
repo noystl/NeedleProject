@@ -73,7 +73,8 @@ def init_arg_parser():
     add_interest_points_args(parser)
 
     parser.add_argument("length", help="1 for a short track, 2 for medium-length and 3 for long", type=int)
-    parser.add_argument("difficulty", help="1 for an easy track, 2 for intermediate and 3 for difficult", type=int)
+    parser.add_argument("difficulty", help="1 for an easy track, 2 for intermediate, 3 for difficult and 4 for very "
+                                           "difficult", type=int)
     parser.add_argument("shape", help="1 for a loop and 2 for out and back", type=int)
 
     return parser
@@ -119,8 +120,10 @@ def add_difficulty_shingle(shing_set: set, args: argparse.Namespace):
         shing_set.add(TrackDifficulty.EASY.value)
     elif args.difficulty == 2:
         shing_set.add(TrackDifficulty.INTERMEDIATE.value)
-    else:
+    elif args.difficulty == 3:
         shing_set.add(TrackDifficulty.DIFFICULT.value)
+    else:
+        shing_set.add(TrackDifficulty.V_DIFFICULT.value)
 
 
 def add_shape_shing(shing_set: set, args: argparse.Namespace):
@@ -192,7 +195,7 @@ def plot_output(args, results: list, tracks_data: dict):
     """
     colors_list = [
         'red', 'green', 'orange', 'lightred', 'pink', 'black', 'blue', 'darkpurple',
-        'darkred', 'cadetblue', 'darkblue', 'darkgreen', 'purple', 'gray'
+        'darkred', 'cadetblue', 'darkblue', 'darkgreen', 'purple', 'gray', 'lightblue'
     ]
 
     # Calculate the center coordinate of the search area and create a map object in this area:
@@ -222,7 +225,7 @@ if __name__ == '__main__':
     Gets the user track preferences as command-line arguments, finds the most similar tracks to the request, and 
     (in the future) presents the results to the user. The presentation of the results now is temporal and mainly 
     used for testing.
-    Usage Example: baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
+    Usage Example: baiersbronn 48.5919 48.5418 8.3692 8.2202 0 0 0 0 0 1 0 1 1 1 2
     """
     arg_parser = init_arg_parser()
     command_line_args = arg_parser.parse_args()
