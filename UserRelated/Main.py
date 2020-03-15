@@ -20,7 +20,7 @@ from TrackShape import TrackShape
 areas_paths = {'baiersbronn':  # Other areas in the future :)
                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
                                                 'areas_databases\\baiersbronn\\baiersbronn_db.json'))}
-SIMILARITY_THRESH = 0.8
+SIMILARITY_THRESH = 0.7
 
 
 def add_limits_args(parser: argparse.ArgumentParser):
