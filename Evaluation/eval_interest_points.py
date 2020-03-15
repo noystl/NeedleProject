@@ -1,17 +1,22 @@
+import math
 import os
+import time
+
+import folium
 import overpy
 import pandas as pd
 import json
-import sklearn
 from sklearn.metrics import precision_score, recall_score, accuracy_score
 from Evaluation import eval_util
 from PointTag import PointTag
 import glob
 import numpy as np
 import matplotlib.pyplot as plt
+from mpl_toolkits import mplot3d
+import OsmDataCollector
 
-RATIO_MAX = 50  # the experiment's max ratio value
-THRESH_MAX = 200  # the experiment's max thresh value
+RATIO_MAX = 10  # the experiment's max ratio value
+THRESH_MAX = 20  # the experiment's max thresh value
 THRESH_STEP = 5  # the experiment's thresh step
 
 
@@ -52,7 +57,6 @@ def get_model_predictions(tracks: list, tracks_candidates: list, closeness_thres
     :return: a list of the predicted results for the existence of an interest point near the given tracks.
     """
     predictions = [0]*len(tracks)
-
     for track_idx, track in enumerate(tracks):
         candidate_points = tracks_candidates[track_idx]
         for idx, point in candidate_points.iterrows():
@@ -81,28 +85,6 @@ def adjust_data(exp_data: pd.DataFrame, feature: PointTag):
     feature_tags_df = pd.DataFrame({'real': feature_tags})
     exp_data.update(feature_tags_df)
 
-#
-# def get_results_closeness_exp(exp_data: pd.DataFrame, tracks: list) -> dict:
-#     """
-#     Gets the accuracy, precision and recall of the algorithm for different values of 'closeness threshold' (=
-#     we say that an interest point belongs to some track if the minimal distance from it to the track is smaller
-#     than this threshold)
-#     :param exp_data: a df (gpx, real) where 'gpx' containing paths of track gpx files, and 'real'
-#     containing a list of the interest  points the corresponding tracks contain.
-#     :param tracks: a list of OsmTrack objects
-#     :return: a dictionary of the form {'accuracy': [], 'precision': [], 'recall': []} containing the values
-#     of accuracy, precision and recall for different thresholds.
-#     """
-#     results = {'accuracy': [], 'precision': [], 'recall': []}
-#
-#     for thresh in range(1, 100):
-#         predictions = get_model_predictions(tracks, PointTag.WATERFALL, thresh)
-#         real = exp_data['real'].values.tolist()
-#         results['accuracy'].append(metrics.accuracy_score(real, predictions))
-#         results['precision'].append(metrics.precision_score(real, predictions))
-#         results['recall'].append(metrics.recall_score(real, predictions))
-#     return results
-
 
 def get_exp_results(exp_data: pd.DataFrame, tracks: list, tracks_candidates: list) -> dict:
     """
@@ -123,8 +105,9 @@ def get_exp_results(exp_data: pd.DataFrame, tracks: list, tracks_candidates: lis
         print("\tratio: ", 1/ratio)
         for thresh in range(0, THRESH_MAX + 1, THRESH_STEP):
             print("\t\tthresh: ", thresh)
+
             predictions = get_model_predictions(tracks, tracks_candidates, thresh, sample_ratio=(1/ratio))
-            results['accuracy'].append(accuracy_score(real, predictions, zero_division=1))
+            results['accuracy'].append(accuracy_score(real, predictions))
             results['precision'].append(precision_score(real, predictions))
             results['recall'].append(recall_score(real, predictions))
     return results
@@ -159,7 +142,10 @@ def get_candidates(area_path, tested_feature, tracks) -> list:
         track_ips = get_interest_points(track_bb, query_list[tested_feature])
         track_ips.to_csv(path)
 
-    return list(pd.read_csv(f) for f in glob.glob(area_path + '\\*.csv'))
+    candidates = []
+    for i in range(len(glob.glob(area_path + '\\*.csv'))):
+        candidates.append(pd.read_csv(os.path.join(area_path, str(i) + ".csv")))
+    return candidates
 
 
 def eval_interest_points(tested_feature: PointTag) -> dict:
@@ -181,7 +167,7 @@ def eval_interest_points(tested_feature: PointTag) -> dict:
     tracks = [eval_util.convert_to_osm(exp_data.gpx[i], i) for i in range(len(exp_data))]
 
     candidates = get_candidates(area_path, tested_feature, tracks)
-    print(exp_data)
+
     print("experimenting...")
     res_file_path = os.path.join(area_path, tested_feature.value + ".json")
     if not os.path.exists(res_file_path):

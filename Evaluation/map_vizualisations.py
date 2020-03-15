@@ -5,6 +5,8 @@ import os
 import folium
 import math
 
+from geopy.distance import geodesic
+
 from Evaluation.eval_interest_points import get_candidates
 from PointTag import PointTag
 from TrackShape import TrackShape
@@ -32,6 +34,60 @@ def visualize_loop_detection(search_area):
                 output_map)
 
     output_map.save('loop_detection.html')
+
+
+def viz(search_area: dict, tag: PointTag):
+    """
+    Creates an interactive map of the search_area, that presents interest point of PointTag tag
+    (an water drop pin) and tracks (trail and a information pin holding the track's index).
+    The interest points that are close to at least one track in search_area are painted in black,
+    and hold the indices of the tracks they are close to.
+    The other interest points are painted gray. the tracks are painted in other colors.
+    The map is saved under 'visualizations\\<tag>\\interest_points_vis.html'
+    for choosing the pic on pins: https://getbootstrap.com/docs/3.3/components/
+    :param search_area: a dictionary of the form {area_name: area data} containing the data of
+    :param tag : PointTag
+    the area we want to visualize.
+    """
+    area_path = os.path.join('visualizations', tag.value)
+    osm_collector = OsmDataCollector(search_area['box'], speed_limit=math.inf)
+    tracks = osm_collector.tracks
+    track = tracks[30]
+    candidates = get_candidates(area_path, tag, tracks)
+    location_x = (search_area['box'][1] + search_area['box'][3]) / 2
+    location_y = (search_area['box'][0] + search_area['box'][2]) / 2
+    output_map = folium.Map(location=[location_x, location_y], zoom_start=13)
+    colors = ['cadetblue', 'darkpurple', 'purple', 'green', 'darkgreen', 'darkred', 'lightred', 'red',
+              'orange', 'blue', 'lightblue', 'darkblue', 'pink', 'lightgray', 'lightgreen']
+
+    markers = {}
+    track_color = colors[track.id % len(colors)]
+
+    # Present track on map, and pin it by idx:
+    folium.PolyLine(track.gps_points.to_numpy()[:, :2], color=track_color, opacity=1).add_to(output_map)
+    folium.Marker(
+        location=[track.gps_points.to_numpy()[:, :2][-1][0], track.gps_points.to_numpy()[:, :2][-1][1]],
+        popup='track ' + str(11),
+        icon=folium.Icon(color=track_color, icon='info-sign')
+    ).add_to(output_map)
+
+    # checks the proximity of a track to it's candidates, saves results under marks:
+    if not candidates[30].empty:
+        lats, lons = candidates[30]['lat'], candidates[30]['lon']
+
+        for idx, point in candidates[30].iterrows():
+            print(candidates[30])
+            for i, track_point in track.gps_points.iterrows():
+                min_dist = min(math.inf, geodesic([track_point.lat, track_point.lon], [point.lat, point.lon]).m)
+                print(min_dist)
+                if min_dist < 200:
+                    print("\t point: ", idx)
+            if track.is_close(point, samp_ratio=1, closeness_thresh=500):  # TODO: change threshes?
+                folium.Marker(location=[candidates[30]['lat'][idx], candidates[30]['lon'][idx]], icon=folium.Icon(color='black', icon='plus')).add_to(output_map)
+            else:
+                folium.Marker(location=[candidates[30]['lat'][idx], candidates[30]['lon'][idx]], icon=folium.Icon(color='black', icon='minus')).add_to(output_map)
+
+    output_map.save(os.path.join(area_path, 'interest_points_vis.html'))
 
 
 def visualize_interest_points_recognition(search_area: dict, tag: PointTag):
@@ -74,7 +130,8 @@ def visualize_interest_points_recognition(search_area: dict, tag: PointTag):
             lats, lons = candidates[track_idx]['lat'], candidates[track_idx]['lon']
 
             for idx, point in candidates[track_idx].iterrows():
-                if track.is_close(point):  # TODO can change threshes
+
+                if track.is_close(point, samp_ratio=1, closeness_thresh=200):
                     if (lats[idx], lons[idx]) in markers:
                         markers[(lats[idx], lons[idx])] += ("\n" + str(track_idx))
                     else:
@@ -134,8 +191,9 @@ if __name__ == '__main__':
              'disingof': {'box': [34.7782, 32.0822, 34.7970, 32.0920]},
              'arc_de_triomphe': {'box': [4.80318, 44.1414, 4.8062, 44.14302]},
              'stone': {'box': [-1.83028, 51.17762, -1.82311, 51.18148]},
-             'germany': {'box': [10.2868, 51.7070, 10.6780, 51.9065]}
+             'germany': {'box': [10.2868, 51.7070, 10.6780, 51.9065]},
              }
-    visualize_interest_points_recognition(areas['germany'], PointTag.HISTORIC)
+    # viz(areas['baiersbronn'], PointTag.WATERFALL)
+    visualize_interest_points_recognition(areas['germany'], PointTag.WATERFALL)
     # visualize_pedestrians_recognition(areas['louvre'])
     # visualize_loop_detection(areas['stone'])
