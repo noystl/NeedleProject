@@ -418,5 +418,5 @@ class HpCrawler:
 if __name__ == "__main__":
 
     to_crawl= ['Spain', 'France', 'Nevada']
-    crawler = HpCrawler()
+    crawler = HpCrawler(to_crawl)
     crawler.crawl()
