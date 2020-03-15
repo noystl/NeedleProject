@@ -5,6 +5,7 @@ class TrackDifficulty(Enum):
     """
     Represents the difficulty of a track.
     """
-    EASY = 'easy'
-    INTERMEDIATE = 'intermediate'
-    DIFFICULT = 'hard'
+    EASY = 'Easy'
+    INTERMEDIATE = 'Intermediate'
+    DIFFICULT = 'Difficult'
+    V_DIFFICULT = 'Very Difficult'

@@ -14,9 +14,6 @@ class OsmTrack:
     """
 
     def __init__(self, segment, track_id):
-        self.CLOSENESS_THRESH_METERS = 200
-        self.LOOP_THRESH_METERS = 100
-        self.SAMPLING_RATIO = 1 / 10
         self.MID_LENGTH_THRESH = 5  # Tracks who's length is between 20m to 40m are considered as medium-length track.
         self.LONG_THRESH = 20  # Tracks longer then 40m are considered long.
         self.id = track_id
@@ -60,18 +57,37 @@ class OsmTrack:
                                [self.gps_points.lat[i + 1], self.gps_points.lon[i + 1]]).km
         return length
 
-    def is_close(self, point: pd.DataFrame) -> bool:
+    def in_boundaries(self, point: pd.DataFrame) -> bool:
+        """
+        Returns true if the given point is in the 'track boundaries', that is, inside the box bounding the
+        track.
+        :param point: a pandas df (lat, lon), containing the coordinates of an interest point.
+        :return: True if the point is in the given track boundaries, False otherwise.
+        """
+        in_lat_boundaries = self.boundaries['south'] <= point.lat <= self.boundaries['north']
+        in_lon_boundaries = self.boundaries['west'] <= point.lon <= self.boundaries['east']
+        return in_lat_boundaries and in_lon_boundaries
+
+    def is_close(self, point: pd.DataFrame, closeness_thresh=200, samp_ratio=1 / 10) -> bool:
         """
         Returns true iff the minimal distance of the interest point from the track is smaller than some threshold.
         :param point: a pandas df (lat, lon), containing the coordinates of an interest point.
+        :param closeness_thresh: we say that an interest point belongs to this track if the minimal distance between
+        the interest point to one of the track's points is smaller then closeness_thresh meters.
+        :param samp_ratio: the relative part of the track's points we sample for the closeness check.
+                the sampling is done deterministically.
         :return: True if the point is close to the track, otherwise False.
         """
+        if not self.in_boundaries(point):
+            return False
         min_dist = math.inf
         # We preform the check only on part of the points, to fasten the running time:
-        sample = self.gps_points.sample(max(int(self.gps_points.shape[0] * self.SAMPLING_RATIO), 1))
+        num_of_samples = max(int(self.gps_points.shape[0] * samp_ratio), 1)  # sample at least one point
+        step_size = int(len(self.gps_points) / num_of_samples)
+        sample = self.gps_points[0:-1: step_size]
         for idx, track_point in sample.iterrows():
             min_dist = min(min_dist, geodesic([track_point.lat, track_point.lon], [point.lat, point.lon]).m)
-        return min_dist < self.CLOSENESS_THRESH_METERS
+        return min_dist < closeness_thresh
 
     def extract_gps_points(self) -> pd.DataFrame:
         """
@@ -85,7 +101,7 @@ class OsmTrack:
              } for p in self.segment.points])
         return gps_points
 
-    def deduce_track_shape(self) -> TrackShape:  # Todo: test more thoroughly
+    def deduce_track_shape(self, thresh=30) -> TrackShape:
         """
         Infers the general shape of the track by looking at the distance between it's start and end points.
         :return: The shape of the track (LOOP if it's a closed curve, and CURVE otherwise)
@@ -93,7 +109,7 @@ class OsmTrack:
         end_point_idx = self.gps_points.shape[0] - 1
         dist = geodesic([self.gps_points.lat[0], self.gps_points.lon[0]],
                         [self.gps_points.lat[end_point_idx], self.gps_points.lon[end_point_idx]]).m
-        return TrackShape.LOOP if dist < self.LOOP_THRESH_METERS else TrackShape.CURVE
+        return TrackShape.LOOP if dist < thresh else TrackShape.CURVE
 
     def get_track_boundaries(self) -> dict:
         """

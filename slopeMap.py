@@ -165,7 +165,7 @@ def compute_slope(track_points, track_elevs, track_length):  # TODO: notify abou
     elev_marks = np.interp(km_marks, track_kms, track_elevs)
 
     # TODO: FOR VISUALIZING-
-    plot_dist_elevation(km_marks, elev_marks)
+    #plot_dist_elevation(km_marks, elev_marks)
 
     # get slopes of all sections:
     slopes = (elev_marks[1:] - elev_marks[:-1]) / tick  # slope between all 2 following tick points

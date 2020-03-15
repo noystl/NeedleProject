@@ -3,11 +3,7 @@ This module get a list of preferences from the user as command-line arguments an
 the request.
 
 Command-Line Arguments Example:
-baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
-
-Note:
-Pay attention that we don't have a real osm-DB yet, so in order to run this module, please generate a fake DB first
-with createExampData.
+baiersbronn 48.6 48.52 8.4 8.3 0 0 0 0 0 1 0 1 1 2 2
 """
 
 import argparse
@@ -15,7 +11,6 @@ import json
 import os
 import folium
 import pandas as pd
-from UserRelated import ResultsTests as tests
 from datasketch import MinHash, MinHashLSH
 from PointTag import PointTag
 from TrackLength import TrackLength
@@ -25,8 +20,7 @@ from TrackShape import TrackShape
 areas_paths = {'baiersbronn':  # Other areas in the future :)
                    os.path.abspath(os.path.join(os.path.dirname(__file__), '..',
                                                 'areas_databases\\baiersbronn\\baiersbronn_db.json'))}
-USER_ID = 'user'
-SIMILARITY_THRESH = 0.6
+SIMILARITY_THRESH = 0.7
 
 
 def add_limits_args(parser: argparse.ArgumentParser):
@@ -73,7 +67,8 @@ def init_arg_parser():
     add_interest_points_args(parser)
 
     parser.add_argument("length", help="1 for a short track, 2 for medium-length and 3 for long", type=int)
-    parser.add_argument("difficulty", help="1 for an easy track, 2 for intermediate and 3 for difficult", type=int)
+    parser.add_argument("difficulty", help="1 for an easy track, 2 for intermediate, 3 for difficult and 4 for very "
+                                           "difficult", type=int)
     parser.add_argument("shape", help="1 for a loop and 2 for out and back", type=int)
 
     return parser
@@ -119,8 +114,10 @@ def add_difficulty_shingle(shing_set: set, args: argparse.Namespace):
         shing_set.add(TrackDifficulty.EASY.value)
     elif args.difficulty == 2:
         shing_set.add(TrackDifficulty.INTERMEDIATE.value)
-    else:
+    elif args.difficulty == 3:
         shing_set.add(TrackDifficulty.DIFFICULT.value)
+    else:
+        shing_set.add(TrackDifficulty.V_DIFFICULT.value)
 
 
 def add_shape_shing(shing_set: set, args: argparse.Namespace):
@@ -182,6 +179,36 @@ def in_geo_limits(args: argparse.Namespace, track_data: dict) -> bool:
             track_data['boundaries']['west'] >= args.west_lim)
 
 
+def pretty_print_results(user_shingles: set, tracks_dict: dict, given_args, result: list):
+    """
+    Prints the preferences of the user and the data on the similar-osm tracks the program had found.
+    :param user_shingles: the shingle set of the user's preferences.
+    :param tracks_dict: a dictionary containing the data we collected over the osm-tracks in the requested area.
+    :param given_args: the given command-line arguments.
+    :param result: a list containing the ids of the osm-tracks the program decided were similar enough to the
+    user's request.
+    """
+    print('USER REQUEST: ')
+    print('Track attributes: ' + str(user_shingles))
+    print('Location: ')
+    print('\t North: ' + str(given_args.north_lim))
+    print('\t South: ' + str(given_args.south_lim))
+    print('\t East: ' + str(given_args.east_lim))
+    print('\t West: ' + str(given_args.west_lim))
+    print('\n')
+
+    print('TRACKS FOUND: ')
+    for t_id in result:
+        print('Track id: ' + str(t_id))
+        print('Track attributes: ' + str(set(tracks_dict[t_id]['attributes'])))
+        print('Location: ')
+        print('\t North: ' + str(tracks_dict[t_id]['boundaries']['north']))
+        print('\t South: ' + str(tracks_dict[t_id]['boundaries']['south']))
+        print('\t East: ' + str(tracks_dict[t_id]['boundaries']['east']))
+        print('\t West: ' + str(tracks_dict[t_id]['boundaries']['west']))
+        print('\n')
+
+
 def plot_output(args, results: list, tracks_data: dict):
     """
     Plots the similar tracks found and their attributes on an interactive map (kept in the file fol.html)
@@ -209,20 +236,19 @@ def plot_output(args, results: list, tracks_data: dict):
         folium.PolyLine(points, color=colors_list[int(result_id) % len(colors_list)], opacity=1).add_to(output_map)
 
         folium.Marker(
-            location=[points[-1][0], points[-1][1]],
+            location=[points[0][0], points[0][1]],
             popup='track ' + result_id + '\n' + str(tracks_data[result_id]['attributes']),
             icon=folium.Icon(color=colors_list[int(result_id) % len(colors_list)], icon='info-sign')
         ).add_to(output_map)
 
-    output_map.save('fol.html')
+    output_map.save('recommended_tracks.html')
 
 
 if __name__ == '__main__':
     """
     Gets the user track preferences as command-line arguments, finds the most similar tracks to the request, and 
-    (in the future) presents the results to the user. The presentation of the results now is temporal and mainly 
-    used for testing.
-    Usage Example: baiersbronn 48.6 48.5 8.4 8.3 0 0 0 0 0 1 0 1 1 1 2
+    (in the future) presents the results to the user.
+    Usage Example: baiersbronn 48.6 48.52 8.4 8.3 0 0 0 0 0 1 0 1 1 2 2
     """
     arg_parser = init_arg_parser()
     command_line_args = arg_parser.parse_args()
@@ -239,6 +265,4 @@ if __name__ == '__main__':
 
     similar_tracks = lsh.query(user_min_hash)
     plot_output(command_line_args, similar_tracks, tracks_dict)
-
-    # For testing:
-    tests.pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)
+    pretty_print_results(user_shing, tracks_dict, command_line_args, similar_tracks)

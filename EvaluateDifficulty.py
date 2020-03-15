@@ -1,10 +1,9 @@
-from datasketch import MinHash, MinHashLSH
 import slopeMap as sm
 import pandas as pd
-from TrackDifficulty import TrackDifficulty
 import OsmTrack
 import os
 import json
+import TrackDifficulty as td
 
 
 class DifficultyEvaluator:
@@ -46,7 +45,6 @@ class DifficultyEvaluator:
         (values of shingles are integers with up to 2 * <shingle_length> digits)
         """
         singles = DifficultyEvaluator.adjust_slopes(slopes)
-        # print('shingles_list ' + str(singles))
         if shingle_length == 1:
             return set(singles)
         res = []
@@ -91,6 +89,7 @@ class DifficultyEvaluator:
         """
         path = os.path.join(DifficultyEvaluator.pts_dir_path, str(sm.get_length_tag(length)) + '.json')
         dictionary = {}
+
         if os.path.exists(path):
             with open(path, "r") as f:
                 file = f.read()
@@ -137,63 +136,147 @@ class DifficultyEvaluator:
             os.makedirs(DifficultyEvaluator.shingles_dir_path)
         with open(path, 'w') as f:
             json.dump(res_json, f, indent=4)
-
         return res
 
-    @staticmethod
-    def get_minhash(shingles: set) -> MinHash:
-        """
-        given a set of shingles, creates a MinHash object updated with those shingles.
-        :param shingles: a set of shingles
-        :return: a MinHash object updated with the given shingles.
-        """
-        minhash = MinHash(num_perm=128)
-        for shin in shingles:
-            minhash.update(str(shin).encode('utf-8'))
-        return minhash
+    def pred_difficulty_known_heights(self, track: pd.DataFrame, k: int):
+        points = track[['lat', 'lon']]
+        pts = points.to_numpy()
+        elev = track['elev']
+        path_length = sm.compute_track_km(pts)[-1]
+        slopes = sm.compute_slope(pts, elev, path_length)
+        osm_shingles = self.shingle_slopes(slopes, self._shingle_length)
 
-    def get_similar_tracks(self, osm_track: OsmTrack) -> list:
+        shingle_dict = self.get_hp_shingled_tracks(path_length)
+        id = shingle_dict.keys()
+
+        shingle_lst = []
+        diff_lst = []
+        # not sure if getting keys and values are returned ordered so im inserting them manually
+        for key in id:
+            shingle_lst.append(shingle_dict[key][0])
+            diff_lst.append(shingle_dict[key][-1])
+
+        best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
+
+        res_dict = {td.TrackDifficulty.EASY.value: 0, td.TrackDifficulty.INTERMEDIATE.value: 0,
+                    td.TrackDifficulty.DIFFICULT.value: 0, td.TrackDifficulty.V_DIFFICULT.value: 0}
+
+        for i in range(len(best_indexes)):
+            res_dict[diff_lst[best_indexes[i]]] += best_values[i]
+
+        best_key = ""
+        best_score = -1
+        for key in res_dict.keys():
+            if res_dict[key] > best_score:
+                best_score = res_dict[key]
+                best_key = key
+        if best_key == td.TrackDifficulty.EASY.value:
+            result = td.TrackDifficulty.EASY
+        elif best_key == td.TrackDifficulty.INTERMEDIATE.value:
+            result = td.TrackDifficulty.INTERMEDIATE
+        elif best_key == td.TrackDifficulty.DIFFICULT.value:
+            result = td.TrackDifficulty.DIFFICULT
+        elif best_key == td.TrackDifficulty.V_DIFFICULT.value:
+            result = td.TrackDifficulty.V_DIFFICULT
+        return result
+
+    def pred_difficulty(self, osm_track: OsmTrack, k):
         """
-        Gets a list of hp-track ids that are considered similar enough to the given osm-track.
-        :param osm_track: an osm-track.
-        :return: the list of ids described above.
+
         """
         osm_shingles = self.get_shingles(osm_track.gps_points.iloc[:, :-1])
-        pts = osm_track.gps_points.iloc[:, :-1]
-        length = sm.compute_track_km(pts.to_numpy())[-1]
-        hp_dict = self.get_hp_shingled_tracks(length)
+        shingle_dict = self.get_hp_shingled_tracks(osm_track.length)
+        id = shingle_dict.keys()
 
-        lsh = MinHashLSH(threshold=0.67, num_perm=128)
-        osm_minhash = self.get_minhash(osm_shingles)
+        shingle_lst = []
+        diff_lst = []
+        # not sure if getting keys and values are returned ordered so im inseting them manually
+        for key in id:
+            shingle_lst.append(shingle_dict[key][0])
+            diff_lst.append(shingle_dict[key][-1])
 
-        for hp_track_key in hp_dict:
-            hp_minhash = self.get_minhash(hp_dict[hp_track_key][0])
-            lsh.insert(hp_track_key, hp_minhash)
-        return lsh.query(osm_minhash)
+        best_indexes, best_values = DifficultyEvaluator.get_k_best(osm_shingles, shingle_lst, k)
+        res_dict = {td.TrackDifficulty.EASY.value: 0, td.TrackDifficulty.INTERMEDIATE.value: 0,
+                    td.TrackDifficulty.DIFFICULT.value: 0, td.TrackDifficulty.V_DIFFICULT.value: 0}
+        for i in range(len(best_indexes)):
+            res_dict[diff_lst[best_indexes[i]]] += best_values[i]
 
-    def add_difficulty(self, osm_track: OsmTrack):
+        best_key = ""
+        best_score = -1
+        for key in res_dict.keys():
+            if res_dict[key] > best_score:
+                best_score = res_dict[key]
+                best_key = key
+        if best_key == td.TrackDifficulty.EASY.value:
+            result = td.TrackDifficulty.EASY
+        elif best_key == td.TrackDifficulty.INTERMEDIATE.value:
+            result = td.TrackDifficulty.INTERMEDIATE
+        elif best_key == td.TrackDifficulty.DIFFICULT.value:
+            result = td.TrackDifficulty.DIFFICULT
+        elif best_key == td.TrackDifficulty.V_DIFFICULT.value:
+            result = td.TrackDifficulty.V_DIFFICULT
+        return result
+
+    @staticmethod
+    def get_jacc(set1: set, set2: set) -> float:
         """
-        Discovers the difficulty of the given osm-track and adds it to the object's inner data.
-        :param osm_track: an osm-track.
+        given 2 python sets returns their jaccard similarity
+        :return: float representing similarity (in [0,1])
         """
-        similar_hp_tracks = self.get_similar_tracks(osm_track)
+        union_set = set.union(set1, set2)
+        intersection_set = set.intersection(set1, set2)
+        return len(intersection_set) / len(union_set)
 
-        # For tests
-        print('similar_tracks' + str(similar_hp_tracks))
+    @staticmethod
+    def get_k_best(item: set, cmp_lst: list, k: int):
+        """
+        :param item: set to be scores against
+        :param cmp_lst: list of sets
+        :param k: interger, number of most similar sets
+        :return: list of length <=k of indexes of to set from cmp_lst and a list of same size of their similarity
+        """
+        i = 0
+        lowest_val = 1  # lowest value in the list
+        lowest_index = -1  # index of lowest value (in res not in cmp_lst)
+        res = []
+        res_val = []
+        # push the first k tracks into the list
+        while i < len(cmp_lst):
+            similarity = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
+            res.append(i)
+            res_val.append(similarity)
+            if similarity < lowest_val:
+                lowest_index = i
+                lowest_val = similarity
+            i += 1
+            if i == k:
+                break
+        else:  # else happens if cmp_lst length is less than k
+            return res, res_val
 
-        if similar_hp_tracks:
-            pts = osm_track.gps_points.iloc[:, :-1]
-            length = sm.compute_track_km(pts.to_numpy())[-1]
-            db_key = str(sm.get_length_tag(length)) + "shingle_len" + str(self._shingle_length)
-            diff = self._shingle_db[db_key][similar_hp_tracks[0]][1]
+        while i < len(cmp_lst):
+            similarity = DifficultyEvaluator.get_jacc(item, cmp_lst[i])
+            if similarity > lowest_val:
+                res[lowest_index] = i
+                res_val[lowest_index] = similarity
+                tmp = DifficultyEvaluator.get_min_index(res_val)
+                lowest_val = res_val[tmp]
+                lowest_index = tmp
+            i += 1
+        return res, res_val
 
-            if diff == 'Easy':
-                osm_track.difficulty = TrackDifficulty.EASY
-            elif diff == 'Intermediate':
-                osm_track.difficulty = TrackDifficulty.INTERMEDIATE
-            else:
-                osm_track.difficulty = TrackDifficulty.DIFFICULT
+    @staticmethod
+    def get_min_index(lst):
+        """
+        returns the index of the minimal element
+        """
+        min = lst[0]
+        min_index = 0
+        i = 1
+        while i < len(lst):
+            if min > lst[i]:
+                min = lst[i]
+                min_index = i
+            i += 1
+        return min_index
 
-        # todo: handle the case where we have several matches.
-        # todo: handle the case where we don't get any match.
-        # todo: fix the issue with the enum (the if-else above)
